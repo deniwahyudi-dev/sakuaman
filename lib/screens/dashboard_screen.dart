@@ -561,27 +561,38 @@ class _DashboardViewState extends State<_DashboardView> {
                             behavior: HitTestBehavior.opaque,
                             onTap: widget.onOpenAutoNotif,
                             child: Center(
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  const Icon(
-                                    CupertinoIcons.bell_fill,
-                                    color: Color(0xFF007AFF),
-                                    size: 17,
-                                  ),
-                                  Positioned(
-                                    top: 8,
-                                    right: 8,
-                                    child: Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF34C759),
-                                        shape: BoxShape.circle,
+                              child: SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  alignment: Alignment.center,
+                                  children: [
+                                    const Icon(
+                                      CupertinoIcons.bell_fill,
+                                      color: Color(0xFF007AFF),
+                                      size: 17,
+                                    ),
+                                    Positioned(
+                                      top: 0,
+                                      right: 1,
+                                      child: Container(
+                                        width: 6.5,
+                                        height: 6.5,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF34C759),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: widget.isDark
+                                                ? const Color(0xFF0F1523)
+                                                : Colors.white,
+                                            width: 1.0,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
