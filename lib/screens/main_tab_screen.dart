@@ -244,46 +244,11 @@ class _MainTabScreenState extends State<MainTabScreen> {
           children: [
             AmbientMeshBackground(
               isDark: _isDark,
-              // Transisi Perpindahan Halaman Luwes Ala iOS (Directional Fluid Crossfade & Soft Slide)
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                reverseDuration: const Duration(milliseconds: 240),
-                switchInCurve: const Cubic(0.22, 1.0, 0.36, 1.0), // iOS Smooth Spring Decelerate
-                switchOutCurve: Curves.easeInCubic,
-                layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: <Widget>[
-                      ...previousChildren,
-                      if (currentChild != null) currentChild,
-                    ],
-                  );
-                },
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  final isForward = _currentIndex >= _previousIndex;
-                  final beginOffset = isForward ? const Offset(0.05, 0.0) : const Offset(-0.05, 0.0);
-
-                  return FadeTransition(
-                    opacity: CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOut,
-                    ),
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: beginOffset,
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: animation,
-                        curve: const Cubic(0.22, 1.0, 0.36, 1.0),
-                      )),
-                      child: child,
-                    ),
-                  );
-                },
-                child: KeyedSubtree(
-                  key: ValueKey<int>(_currentIndex),
-                  child: screens[_currentIndex],
-                ),
+              // Standar Asli iOS (IndexedStack): Tab switching instan, bebas glitch off-screen shader,
+              // dan posisi scroll tiap halaman tetap terjaga sempurna!
+              child: IndexedStack(
+                index: _currentIndex,
+                children: screens,
               ),
             ),
 
