@@ -9,7 +9,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
 
-  // Warm-up and pre-compile Liquid Glass Shaders directly onto GPU (Dimensity 9300+)
+  // Warm-up and pre-compile Liquid Glass Shaders directly onto GPU
   try {
     await LiquidGlassShaders.ensureLoaded();
   } catch (_) {

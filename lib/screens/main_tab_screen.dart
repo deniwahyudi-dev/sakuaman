@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 import '../models/transaction.dart';
+import '../services/promotion_manager.dart';
 import '../theme/saku_theme.dart';
 import '../widgets/ambient_mesh_background.dart';
 import '../widgets/add_transaction_sheet.dart';
@@ -27,6 +28,21 @@ class _MainTabScreenState extends State<MainTabScreen> {
   int _previousIndex = 0;
   late bool _isDark;
   bool _isMorphOpen = false;
+  bool _isTopPopoverOpen = false;
+  final ValueNotifier<int> _dismissTopPopoverSignal = ValueNotifier<int>(0);
+
+  bool get _isAnyPopoverOpen => _isMorphOpen || _isTopPopoverOpen;
+
+  void _dismissAllPopovers() {
+    HapticFeedback.selectionClick();
+    if (_isMorphOpen) {
+      setState(() => _isMorphOpen = false);
+    }
+    if (_isTopPopoverOpen) {
+      _dismissTopPopoverSignal.value++;
+      setState(() => _isTopPopoverOpen = false);
+    }
+  }
 
   // Initial Sample Transactions
   final List<TransactionModel> _transactions = [
@@ -81,6 +97,14 @@ class _MainTabScreenState extends State<MainTabScreen> {
   void initState() {
     super.initState();
     _isDark = widget.initialIsDark;
+    ProMotionManager.instance.initialize();
+  }
+
+  @override
+  void dispose() {
+    _dismissTopPopoverSignal.dispose();
+    ProMotionManager.instance.dispose();
+    super.dispose();
   }
 
   void _addTransaction(TransactionModel tx) {
@@ -115,6 +139,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
   }
 
   void _openAutoNotif() {
+    _dismissAllPopovers();
     Navigator.of(context).push(
       CupertinoPageRoute(
         builder: (ctx) => NotificationListenerScreen(
@@ -136,6 +161,12 @@ class _MainTabScreenState extends State<MainTabScreen> {
         isDark: _isDark,
         onToggleTheme: _toggleTheme,
         onOpenAutoNotif: _openAutoNotif,
+        onPopoverStateChanged: (isOpen) {
+          if (_isTopPopoverOpen != isOpen) {
+            setState(() => _isTopPopoverOpen = isOpen);
+          }
+        },
+        dismissSignal: _dismissTopPopoverSignal,
         onNavigateToHistory: () {
           setState(() {
             _previousIndex = _currentIndex;
@@ -159,26 +190,32 @@ class _MainTabScreenState extends State<MainTabScreen> {
         isDark: _isDark,
         onToggleTheme: _toggleTheme,
         onOpenAutoNotif: _openAutoNotif,
+        onPopoverStateChanged: (isOpen) {
+          if (_isTopPopoverOpen != isOpen) {
+            setState(() => _isTopPopoverOpen = isOpen);
+          }
+        },
+        dismissSignal: _dismissTopPopoverSignal,
       ),
     ];
 
-    // Formula Kaca Kristal Transparan Kembar (Murni tembus wallpaper)
-    // Formula Kaca Kristal Transparan Kembar (Ultra-Clear Crystal Glass, Low Opacity & Crisp Blur)
+    // Formula iOS Frosted Glass Diffusion Shield (Apple Ultra-Thin Material)
+    // Mencegah teks hitam tampak "kotor / oily smudged" saat lewat di bawah navbar:
+    // 1. Blur dinaikkan ke 20.0 (standar iOS) agar teks mencair jadi bayangan bokeh halus
+    // 2. Base shield opacity 82% (Light) & 75% (Dark) menyerap kontras tinggi
+    // 3. Magnification dinetralkan (1.0) & Dispersi diminimalkan (0.2) agar bebas artefak pelangi
     final crystalGlassStyle = LiquidGlassStyle(
       shape: const LiquidGlassShape.continuousRoundedRectangle(
         cornerRadius: 32,
       ),
-      // Opacity diturunkan sangat tipis & jernih (tidak berkabut)
       color: _isDark
-          ? Colors.white.withValues(alpha: 0.035)
-          : Colors.white.withValues(alpha: 0.09),
-      // Blur dikurangi agar konten di baliknya tampak jauh lebih tajam & bening
-      blur: 4.0,
-      // Refraksi & Magnifikasi optik dinamis tetap dipertahankan
-      refractionIndex: 1.24,
-      refractionWidth: 12.0,
-      magnification: 1.05, // Efek lensa optik membesarkan konten yang lewat di bawahnya!
-      dispersion: 1.8,     // Dispersi pelangi dinamis saat melewati kontras terang/gelap
+          ? const Color(0xFF0F1626).withValues(alpha: 0.75)
+          : Colors.white.withValues(alpha: 0.82),
+      blur: 20.0,
+      refractionIndex: 1.15,
+      refractionWidth: 10.0,
+      magnification: 1.0,
+      dispersion: 0.2,
       specular: LiquidGlassLight.specular(
         thickness: 3.0,
         intensity: _isDark ? 1.10 : 1.15,
@@ -190,15 +227,16 @@ class _MainTabScreenState extends State<MainTabScreen> {
         color: const Color(0xFF007AFF),
       ),
       shadow: LiquidGlassShadow(
-        blur: 10,
-        opacity: _isDark ? 0.16 : 0.12,
-        color: _isDark ? Colors.black.withValues(alpha: 0.50) : const Color(0xFF0F172A),
+        blur: 16,
+        opacity: _isDark ? 0.30 : 0.10,
+        color: _isDark ? Colors.black : const Color(0xFF0F172A),
+        offset: const Offset(0, 6),
       ),
-      // Dynamic Luminance Adaptivity: otomatis mendeteksi kecerahan konten di bawahnya
+      // Dynamic Luminance Adaptivity: otomatis menjaga kontras teks dan icon tab bar
       adaptivity: LiquidGlassAdaptivity(
-        glassColorOnDark: Colors.white.withValues(alpha: 0.035),
+        glassColorOnDark: const Color(0xFF0F1626).withValues(alpha: 0.75),
         contentColorOnDark: Colors.white,
-        glassColorOnLight: Colors.white.withValues(alpha: 0.09),
+        glassColorOnLight: Colors.white.withValues(alpha: 0.82),
         contentColorOnLight: const Color(0xFF0F172A),
         continuousGlassColor: true,
         duration: const Duration(milliseconds: 220),
@@ -230,65 +268,98 @@ class _MainTabScreenState extends State<MainTabScreen> {
           // ── FULL APPLE DYNAMIC ADAPTIVITY (LUMINANCE SAMPLING & REAL-TIME CONTRAST) ──
           adaptivity: LiquidGlassScaffoldAdaptivity(
             LiquidGlassAdaptivity(
-              glassColorOnDark: Colors.white.withValues(alpha: 0.035),
+              glassColorOnDark: const Color(0xFF0F1626).withValues(alpha: 0.75),
               contentColorOnDark: const Color(0xFF94A3B8),
-              glassColorOnLight: Colors.white.withValues(alpha: 0.09),
+              glassColorOnLight: Colors.white.withValues(alpha: 0.82),
               contentColorOnLight: const Color(0xFF64748B),
               continuousGlassColor: true,
               duration: const Duration(milliseconds: 280),
             ),
             systemChrome: LiquidGlassSystemChrome.none,
           ),
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            AmbientMeshBackground(
-              isDark: _isDark,
-              // Standar Asli iOS (IndexedStack): Tab switching instan, bebas glitch off-screen shader,
-              // dan posisi scroll tiap halaman tetap terjaga sempurna!
-              child: IndexedStack(
-                index: _currentIndex,
-                children: screens,
-              ),
-            ),
-
-            // Background barrier to dismiss morph menu when open
-            if (_isMorphOpen)
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    setState(() {
-                      _isMorphOpen = false;
-                    });
-                  },
+        body: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => ProMotionManager.instance.reportInteraction(),
+          onPointerMove: (_) => ProMotionManager.instance.reportInteraction(),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AmbientMeshBackground(
+                isDark: _isDark,
+                // Standar Asli iOS (IndexedStack): Tab switching instan, bebas glitch off-screen shader,
+                // dan posisi scroll tiap halaman tetap terjaga sempurna!
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: screens,
                 ),
               ),
 
-            // Morphed Transaction Menu (Mengembang tepat di atas tombol '+')
-            if (_isMorphOpen)
-              Positioned(
-                bottom: MediaQuery.of(context).padding.bottom + 96,
-                right: 18,
-                child: _buildMorphedMenu(),
+              // ── PROMOTION DYNAMIC HUD PILL (REAL-TIME 1 FPS / 60 FPS / 144 FPS) ──
+              ValueListenableBuilder<bool>(
+                valueListenable: ProMotionManager.instance.showFpsBadge,
+                builder: (context, showBadge, _) {
+                  if (!showBadge) return const SizedBox.shrink();
+                  final statusBarHeight = MediaQuery.paddingOf(context).top;
+                  final topPadding = statusBarHeight > 0 ? statusBarHeight + 6 : 8.0;
+                  return Positioned(
+                    top: topPadding + 4,
+                    left: 90,
+                    right: 90,
+                    height: 32,
+                    child: Center(
+                      child: _buildProMotionHudPill(),
+                    ),
+                  );
+                },
               ),
-          ],
+
+              // Background barrier to dismiss morph menu when open
+              if (_isMorphOpen)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      setState(() {
+                        _isMorphOpen = false;
+                      });
+                    },
+                  ),
+                ),
+
+              // Morphed Transaction Menu (Mengembang tepat di atas tombol '+')
+              if (_isMorphOpen)
+                Positioned(
+                  bottom: MediaQuery.of(context).padding.bottom + 96,
+                  right: 18,
+                  child: _buildMorphedMenu(),
+                ),
+            ],
+          ),
         ),
 
         // NAVBAR UTAMA DENGAN DUAL-PIPELINE KACA MEMBESAR & TAHAN GESER OTENTIK
+        // Defocused & Dimmed (ala iOS) saat kotak pembesar (notifikasi / profil / plus menu) terbuka
         bottomNavigationBar: LiquidGlassTabBar(
           width: navBarWidth,
-          height: 64,
+          height: 66,
           alignment: Alignment.bottomLeft,
           margin: const EdgeInsets.only(left: sideMargin, bottom: 20),
-          itemPadding: 4,
+          itemPadding: 2,
           selectedIndex: _currentIndex,
           onChanged: (index) {
+            if (_isAnyPopoverOpen) {
+              _dismissAllPopovers();
+              return;
+            }
             if (_currentIndex != index) {
               setState(() {
                 _previousIndex = _currentIndex;
                 _currentIndex = index;
                 _isMorphOpen = false;
+                if (_isTopPopoverOpen) {
+                  _dismissTopPopoverSignal.value++;
+                  _isTopPopoverOpen = false;
+                }
               });
             }
           },
@@ -311,11 +382,23 @@ class _MainTabScreenState extends State<MainTabScreen> {
             ),
           ],
           itemStyle: LiquidGlassTabItemStyle(
-            // Di Dark Mode icon & label putih kristal otentik seperti Foto 1 ("Daftar Putar")
-            selectedColor: _isDark ? Colors.white : const Color(0xFF007AFF),
+            // Saat dilewati kaca cembung di Mode Gelap, icon & label menyala Biru Elektrik Apple iOS
+            // (0xFF0A84FF di Dark Mode, 0xFF007AFF di Light Mode)
+            // Saat popover terbuka, warna meredup lembut (defocused ala iOS)
+            selectedColor: _isDark
+                ? (_isAnyPopoverOpen
+                    ? const Color(0xFF0A84FF).withValues(alpha: 0.35)
+                    : const Color(0xFF0A84FF))
+                : (_isAnyPopoverOpen
+                    ? const Color(0xFF007AFF).withValues(alpha: 0.35)
+                    : const Color(0xFF007AFF)),
             unselectedColor: _isDark
-                ? const Color(0xFF94A3B8)
-                : const Color(0xFF64748B),
+                ? (_isAnyPopoverOpen
+                    ? const Color(0xFF94A3B8).withValues(alpha: 0.25)
+                    : const Color(0xFF94A3B8))
+                : (_isAnyPopoverOpen
+                    ? const Color(0xFF64748B).withValues(alpha: 0.25)
+                    : const Color(0xFF64748B)),
             iconSize: 22,
             underGlassIconSize: 28, // Kaca membesar icon!
             labelFontSize: 10.5,
@@ -333,72 +416,104 @@ class _MainTabScreenState extends State<MainTabScreen> {
               magnification: 0.87,
             ),
             color: _isDark
-                ? Colors.white.withValues(alpha: 0.04)
-                : const Color(0xFF0F172A).withValues(alpha: 0.03),
+                ? Colors.white.withValues(alpha: _isAnyPopoverOpen ? 0.015 : 0.04)
+                : const Color(0xFF0F172A).withValues(alpha: _isAnyPopoverOpen ? 0.01 : 0.03),
             glassStyle: LiquidGlassStyle(
               shape: const LiquidGlassShape(),
               // Garis rim specular putih tipis, tajam & bersih
               specular: LiquidGlassLight.specular(
                 thickness: _isDark ? 1.8 : 3.5,
-                intensity: _isDark ? 1.10 : 1.0,
+                intensity: _isAnyPopoverOpen ? 0.30 : (_isDark ? 1.10 : 1.0),
               ),
               // Pendaran putih kristal sangat tipis & transparan di dalam kaca cembung
               color: _isDark
-                  ? Colors.white.withValues(alpha: 0.04)
+                  ? Colors.white.withValues(alpha: _isAnyPopoverOpen ? 0.01 : 0.04)
                   : Colors.transparent,
               blur: 0,
               refractionIndex: 1.03,
               refractionWidth: 10,
               magnification: 1,
-              // Dispersi spektrum pelangi lembut tanpa celah hitam
-              dispersion: _isDark ? 1.35 : 1.32,
+              // Dispersi spektrum pelangi lembut & subtle tanpa artefak kotor
+              dispersion: _isDark ? 0.3 : 0.2,
               // Bayangan kontak natural halus
               shadow: LiquidGlassShadow(
-                blur: 6,
-                opacity: _isDark ? 0.15 : 0.15,
+                blur: _isAnyPopoverOpen ? 2 : 6,
+                opacity: _isAnyPopoverOpen ? 0.04 : 0.15,
                 color: Colors.black,
                 offset: const Offset(0, 2),
               ),
             ),
           ),
-          style: crystalGlassStyle,
+          style: _isAnyPopoverOpen
+              ? crystalGlassStyle.copyWith(
+                  color: _isDark
+                      ? const Color(0xFF0F1626).withValues(alpha: 0.35)
+                      : Colors.white.withValues(alpha: 0.38),
+                  blur: 10.0,
+                  shadow: const LiquidGlassShadow(
+                    blur: 3,
+                    opacity: 0.04,
+                    color: Colors.black,
+                    offset: Offset(0, 1),
+                  ),
+                )
+              : crystalGlassStyle,
         ),
 
         // TOMBOL '+' BERSIH DAN SEJAJAR DENGAN EFEK TAHAN MELAR HALUS & REFINED (SUBTLE JELLY)
-        bottomNavigationBarAction: SizedBox(
-          width: plusSize,
-          height: plusSize,
-          child: LiquidGlassLens(
-            style: crystalGlassStyle.copyWith(
-              shape: const LiquidGlassShape.roundedRectangle(
-                cornerRadius: 32,
-              ),
-            ),
-            // Sentuhan melar lembut & terkendali (tidak lebay agar tidak bertabrakan dengan navbar 4 tombol)
-            touch: const LiquidGlassTouch(
-              flex: LiquidGlassFlex(
-                stretch: 6.0,          // Melar lembut & proporsional (maks 6px, aman & elegan)
-                squeeze: 0.28,         // Deformasi volume halus tanpa gepeng
-                lean: 0.18,            // Mengikuti jari secukupnya
-                grip: 0.50,            // Cengkeraman seimbang
-                compressInward: true,  // Tetap elastis kenyal jika ditekan ke dalam
-                holdScale: 0.025,      // Mengembang halus (+2.5%) saat ditahan
-                tapScale: 0.02,        // Haptic micro-pop renyah saat tap
-              ),
-            ),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() {
-                  _isMorphOpen = !_isMorphOpen;
-                });
-              },
-              child: const Center(
-                child: Icon(
-                  CupertinoIcons.plus,
-                  color: Color(0xFF007AFF),
-                  size: 29,
+        // Ikut meredup ala iOS saat popover atas (notifikasi / profil) sedang membesar
+        bottomNavigationBarAction: AnimatedOpacity(
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          opacity: _isTopPopoverOpen ? 0.38 : 1.0,
+          child: GestureDetector(
+            behavior: _isTopPopoverOpen
+                ? HitTestBehavior.opaque
+                : HitTestBehavior.deferToChild,
+            onTap: _isTopPopoverOpen ? _dismissAllPopovers : null,
+            child: AbsorbPointer(
+              absorbing: _isTopPopoverOpen,
+              child: SizedBox(
+                width: plusSize,
+                height: plusSize,
+                child: LiquidGlassLens(
+                  style: crystalGlassStyle.copyWith(
+                    shape: const LiquidGlassShape.roundedRectangle(
+                      cornerRadius: 32,
+                    ),
+                  ),
+                  // Sentuhan melar lembut & terkendali (tidak lebay agar tidak bertabrakan dengan navbar 4 tombol)
+                  touch: const LiquidGlassTouch(
+                    flex: LiquidGlassFlex(
+                      stretch: 6.0,          // Melar lembut & proporsional (maks 6px, aman & elegan)
+                      squeeze: 0.28,         // Deformasi volume halus tanpa gepeng
+                      lean: 0.18,            // Mengikuti jari secukupnya
+                      grip: 0.50,            // Cengkeraman seimbang
+                      compressInward: true,  // Tetap elastis kenyal jika ditekan ke dalam
+                      holdScale: 0.025,      // Mengembang halus (+2.5%) saat ditahan
+                      tapScale: 0.02,        // Haptic micro-pop renyah saat tap
+                    ),
+                  ),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      if (_isTopPopoverOpen) {
+                        _dismissAllPopovers();
+                        return;
+                      }
+                      setState(() {
+                        _isMorphOpen = !_isMorphOpen;
+                      });
+                    },
+                    child: const Center(
+                      child: Icon(
+                        CupertinoIcons.plus,
+                        color: Color(0xFF007AFF),
+                        size: 29,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -408,6 +523,88 @@ class _MainTabScreenState extends State<MainTabScreen> {
       ),
     ),
   );
+  }
+
+  // Kapsul Penanda Real-Time ProMotion (1 FPS / 60 FPS / 144 FPS)
+  Widget _buildProMotionHudPill() {
+    return ValueListenableBuilder<int>(
+      valueListenable: ProMotionManager.instance.currentFps,
+      builder: (context, fps, _) {
+        final bool isIdle = fps <= 1;
+        final bool isMax = fps >= 120;
+        final Color accentColor = isIdle
+            ? const Color(0xFF34C759) // Emerald green calm saat 1 FPS
+            : (isMax ? const Color(0xFF007AFF) : const Color(0xFF5856D6));
+
+        final String label = isIdle
+            ? "1 FPS • LTPO"
+            : (isMax ? "$fps FPS • Pro" : "$fps FPS");
+
+        return BouncyTouchWrapper(
+          scaleFactor: 0.94,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            // Switch to Akun tab to manage ProMotion
+            if (_currentIndex != 3) {
+              setState(() {
+                _previousIndex = _currentIndex;
+                _currentIndex = 3;
+              });
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+            decoration: BoxDecoration(
+              color: _isDark
+                  ? const Color(0xFF0F1626).withValues(alpha: 0.85)
+                  : Colors.white.withValues(alpha: 0.88),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: accentColor.withValues(alpha: isIdle ? 0.35 : 0.60),
+                width: 0.8,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: accentColor.withValues(alpha: isIdle ? 0.12 : 0.28),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accentColor,
+                    boxShadow: [
+                      if (!isIdle)
+                        BoxShadow(
+                          color: accentColor.withValues(alpha: 0.8),
+                          blurRadius: 6,
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: _isDark ? Colors.white : const Color(0xFF0F172A),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // Panel Kotak Kaca Cair saat mengembang (Liquid Menu)

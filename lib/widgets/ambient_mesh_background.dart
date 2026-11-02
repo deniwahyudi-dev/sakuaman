@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../services/promotion_manager.dart';
 
 /// Dynamic Ambient Breathing Mesh Orbs
 ///
@@ -31,10 +32,27 @@ class _AmbientMeshBackgroundState extends State<AmbientMeshBackground>
       vsync: this,
       duration: const Duration(seconds: 8),
     )..repeat(reverse: true);
+
+    ProMotionManager.instance.isIdle.addListener(_handleProMotionIdleChange);
+  }
+
+  void _handleProMotionIdleChange() {
+    if (!mounted) return;
+    if (ProMotionManager.instance.isIdle.value &&
+        ProMotionManager.instance.isEngineEnabled.value) {
+      if (_meshController.isAnimating) {
+        _meshController.stop(canceled: false);
+      }
+    } else {
+      if (!_meshController.isAnimating) {
+        _meshController.repeat(reverse: true);
+      }
+    }
   }
 
   @override
   void dispose() {
+    ProMotionManager.instance.isIdle.removeListener(_handleProMotionIdleChange);
     _meshController.dispose();
     super.dispose();
   }

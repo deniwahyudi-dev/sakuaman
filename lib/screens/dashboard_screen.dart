@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +21,8 @@ class DashboardScreen extends StatelessWidget {
   final VoidCallback onToggleTheme;
   final VoidCallback? onOpenAutoNotif;
   final VoidCallback? onNavigateToHistory;
+  final ValueChanged<bool>? onPopoverStateChanged;
+  final ValueListenable<int>? dismissSignal;
 
   const DashboardScreen({
     super.key,
@@ -30,6 +33,8 @@ class DashboardScreen extends StatelessWidget {
     required this.onToggleTheme,
     this.onOpenAutoNotif,
     this.onNavigateToHistory,
+    this.onPopoverStateChanged,
+    this.dismissSignal,
   });
 
   @override
@@ -42,6 +47,8 @@ class DashboardScreen extends StatelessWidget {
       onToggleTheme: onToggleTheme,
       onOpenAutoNotif: onOpenAutoNotif,
       onNavigateToHistory: onNavigateToHistory,
+      onPopoverStateChanged: onPopoverStateChanged,
+      dismissSignal: dismissSignal,
     );
   }
 }
@@ -54,6 +61,8 @@ class _DashboardView extends StatefulWidget {
   final VoidCallback onToggleTheme;
   final VoidCallback? onOpenAutoNotif;
   final VoidCallback? onNavigateToHistory;
+  final ValueChanged<bool>? onPopoverStateChanged;
+  final ValueListenable<int>? dismissSignal;
 
   const _DashboardView({
     required this.transactions,
@@ -63,6 +72,8 @@ class _DashboardView extends StatefulWidget {
     required this.onToggleTheme,
     this.onOpenAutoNotif,
     this.onNavigateToHistory,
+    this.onPopoverStateChanged,
+    this.dismissSignal,
   });
 
   @override
@@ -72,6 +83,48 @@ class _DashboardView extends StatefulWidget {
 class _DashboardViewState extends State<_DashboardView> {
   bool _isInteractingTopBar = false;
   bool _isInteractingBalanceCard = false;
+  bool _isNotifMenuOpen = false;
+  bool _wideNotif = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.dismissSignal?.addListener(_handleDismissSignal);
+  }
+
+  @override
+  void didUpdateWidget(_DashboardView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.dismissSignal != widget.dismissSignal) {
+      oldWidget.dismissSignal?.removeListener(_handleDismissSignal);
+      widget.dismissSignal?.addListener(_handleDismissSignal);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.dismissSignal?.removeListener(_handleDismissSignal);
+    super.dispose();
+  }
+
+  void _handleDismissSignal() {
+    if (_isNotifMenuOpen) {
+      _toggleNotifMorph(false);
+    }
+  }
+
+  void _toggleNotifMorph([bool? open]) {
+    final target = open ?? !_isNotifMenuOpen;
+    if (_isNotifMenuOpen == target) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _isNotifMenuOpen = target;
+      if (target) {
+        _wideNotif = true;
+      }
+    });
+    widget.onPopoverStateChanged?.call(target);
+  }
 
   double get _totalIncome {
     return widget.transactions
@@ -211,7 +264,7 @@ class _DashboardViewState extends State<_DashboardView> {
         children: [
           // ── KONTEN SCROLLABLE DI BAWAH KACA (FLOWS UNDERNEATH PINNED TOP BAR) ──
           CustomScrollView(
-            physics: (_isInteractingTopBar || _isInteractingBalanceCard)
+            physics: (_isInteractingTopBar || _isInteractingBalanceCard || _isNotifMenuOpen)
                 ? const NeverScrollableScrollPhysics()
                 : const BouncingScrollPhysics(),
             slivers: [
@@ -461,11 +514,28 @@ class _DashboardViewState extends State<_DashboardView> {
           ),
         ),
 
-        // ── PINNED FLOATING LIQUID ISLANDS (ALA QURANIFY IOS 26) ──
+        // ── FULLSCREEN BACKDROP BARRIER SAAT POPOVER NOTIFIKASI TERBUKA ──
+        if (_isNotifMenuOpen)
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _toggleNotifMorph(false),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                color: Colors.black.withValues(
+                  alpha: widget.isDark ? 0.35 : 0.15,
+                ),
+              ),
+            ),
+          ),
+
+        // ── POJOK KIRI ATAS: FLOATING LIQUID PILL [ 💳 SakuAman ] ──
         Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
+          top: topIslandPadding,
+          left: 20,
+          width: 142,
+          height: 38,
           child: Listener(
             behavior: HitTestBehavior.translucent,
             onPointerDown: (_) {
@@ -483,131 +553,393 @@ class _DashboardViewState extends State<_DashboardView> {
                 setState(() => _isInteractingTopBar = false);
               }
             },
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(20, topIslandPadding, 20, 6),
-              child: SizedBox(
-                height: 38,
-                child: Stack(
-                  clipBehavior: Clip.none,
+            child: LiquidGlassLens(
+              style: pillGlassStyle,
+              touch: jellyTouch,
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Pojok Kiri Atas: Floating Liquid Pill [ 💳 SakuAman ]
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      width: 142,
-                      height: 38,
-                      child: LiquidGlassLens(
-                        style: pillGlassStyle,
-                        touch: jellyTouch,
-                        child: Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SakuLogo(size: 20, isDark: widget.isDark),
-                              const SizedBox(width: 8),
-                              Text(
-                                "SakuAman",
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                    SakuLogo(size: 20, isDark: widget.isDark),
+                    const SizedBox(width: 8),
+                    Text(
+                      "SakuAman",
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
                       ),
                     ),
-
-                    // Pojok Kanan Atas 1: Quick Theme Switcher (Di ujung paling kanan)
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      width: 38,
-                      height: 38,
-                      child: LiquidGlassLens(
-                        style: circleGlassStyle,
-                        touch: jellyTouch,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: widget.onToggleTheme,
-                          child: Center(
-                            child: Icon(
-                              widget.isDark
-                                  ? CupertinoIcons.sun_max_fill
-                                  : CupertinoIcons.moon_stars_fill,
-                              color: widget.isDark
-                                  ? const Color(0xFFFF9E00)
-                                  : const Color(0xFF5856D6),
-                              size: 17,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Pojok Kanan Atas 2: Auto-Detect SMS & Notifikasi (Pindah Halaman ke Scanner & Log)
-                    if (widget.onOpenAutoNotif != null)
-                      Positioned(
-                        right: 48, // 38px theme width + 10px gap
-                        top: 0,
-                        width: 38,
-                        height: 38,
-                        child: LiquidGlassLens(
-                          style: circleGlassStyle,
-                          touch: jellyTouch,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: widget.onOpenAutoNotif,
-                            child: Center(
-                              child: SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  alignment: Alignment.center,
-                                  children: [
-                                    const Icon(
-                                      CupertinoIcons.bell_fill,
-                                      color: Color(0xFF007AFF),
-                                      size: 17,
-                                    ),
-                                    Positioned(
-                                      top: 0,
-                                      right: 1,
-                                      child: Container(
-                                        width: 6.5,
-                                        height: 6.5,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF34C759),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: widget.isDark
-                                                ? const Color(0xFF0F1523)
-                                                : Colors.white,
-                                            width: 1.0,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
             ),
           ),
         ),
+
+        // ── POJOK KANAN ATAS: LONCENG NOTIFIKASI FLUID MORPH [ 🔔 -> POPOVER NOTIFIKASI ] ──
+        if (widget.onOpenAutoNotif != null)
+          Builder(
+            builder: (context) {
+              final double screenWidth = MediaQuery.sizeOf(context).width;
+              final double menuWidth = screenWidth - 40.0;
+
+              const double notifMenuHeight = 175.0;
+
+              return Positioned(
+                top: topIslandPadding,
+                right: 20,
+                width: _wideNotif ? menuWidth : 38.0,
+                height: _wideNotif ? notifMenuHeight : 38.0,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    LiquidGlassMorph(
+                      alignment: Alignment.topRight,
+                      motion: LiquidGlassMorphMotion.fluid,
+                      smoothness: 28,
+                      style: LiquidGlassStyle(
+                        shape: LiquidGlassShape.continuousRoundedRectangle(
+                          cornerRadius: _isNotifMenuOpen ? 24 : 19,
+                          clipQuality: LiquidGlassClipQuality.exact,
+                        ),
+                        color: widget.isDark
+                            ? (_isNotifMenuOpen
+                                ? const Color(0xFF141927).withValues(alpha: 0.55)
+                                : Colors.white.withValues(alpha: 0.045))
+                            : (_isNotifMenuOpen
+                                ? Colors.white.withValues(alpha: 0.60)
+                                : Colors.white.withValues(alpha: 0.12)),
+                        blur: _isNotifMenuOpen ? 8.0 : 3.5,
+                        refractionIndex: 1.24,
+                        refractionWidth: 12.0,
+                        magnification: 1.05,
+                        dispersion: 1.8,
+                        specular: LiquidGlassLight.specular(
+                          thickness: 3.2,
+                          intensity: widget.isDark ? 1.20 : 1.30,
+                        ),
+                        glow: LiquidGlassLight.glow(
+                          thickness: 5.0,
+                          intensity: widget.isDark ? 0.20 : 0.15,
+                          color: const Color(0xFF007AFF),
+                        ),
+                        shadow: LiquidGlassShadow(
+                          blur: _isNotifMenuOpen ? 20 : 6,
+                          opacity: widget.isDark ? 0.28 : 0.06,
+                          color: Colors.black,
+                          offset: _isNotifMenuOpen
+                              ? const Offset(0, 6)
+                              : const Offset(0, 2),
+                        ),
+                      ),
+                      onEnd: () {
+                        if (_wideNotif != _isNotifMenuOpen) {
+                          setState(() => _wideNotif = _isNotifMenuOpen);
+                        }
+                      },
+                      child: _isNotifMenuOpen
+                          ? _buildMorphedNotifMenu(
+                              textColor,
+                              secondaryTextColor,
+                              widget.isDark,
+                              menuWidth,
+                            )
+                          : _buildNotifGlyph(widget.isDark),
+                    ),
+                    if (!_isNotifMenuOpen)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        width: 38,
+                        height: 38,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _toggleNotifMorph(true),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
       ],
     ),
   );
 }
+
+  Widget _buildNotifGlyph(bool isDark) {
+    return GestureDetector(
+      key: const ValueKey<String>('notif_glyph'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _toggleNotifMorph(true),
+      child: SizedBox(
+        width: 38,
+        height: 38,
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  CupertinoIcons.bell_fill,
+                  color: isDark ? Colors.white : const Color(0xFF007AFF),
+                  size: 17,
+                ),
+                Positioned(
+                  top: 0,
+                  right: 1,
+                  child: Container(
+                    width: 6.5,
+                    height: 6.5,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF34C759),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF0F1523) : Colors.white,
+                        width: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMorphedNotifMenu(
+    Color textColor,
+    Color secondaryTextColor,
+    bool isDark,
+    double menuWidth,
+  ) {
+    final latestTx =
+        widget.transactions.isNotEmpty ? widget.transactions.first : null;
+
+    return SizedBox(
+      key: const ValueKey<String>('notif_menu'),
+      width: menuWidth,
+      height: 175,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header: Judul & Tombol Tutup (X)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF007AFF).withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.bell_fill,
+                        color: Color(0xFF007AFF),
+                        size: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Notifikasi Terbaru",
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
+                ),
+                BouncyTouchWrapper(
+                  scaleFactor: 0.82,
+                  onTap: () => _toggleNotifMorph(false),
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: secondaryTextColor.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      CupertinoIcons.xmark,
+                      color: secondaryTextColor,
+                      size: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Card Preview: Notifikasi Transaksi Terakhir / Status Auto-Detect
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.04)
+                    : Colors.black.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.black.withValues(alpha: 0.05),
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: (latestTx != null &&
+                              latestTx.type == TransactionType.income)
+                          ? const Color(0xFF34C759).withValues(alpha: 0.15)
+                          : const Color(0xFF007AFF).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      (latestTx != null &&
+                              latestTx.type == TransactionType.income)
+                          ? CupertinoIcons.arrow_down_circle_fill
+                          : CupertinoIcons.tray_arrow_down_fill,
+                      color: (latestTx != null &&
+                              latestTx.type == TransactionType.income)
+                          ? const Color(0xFF34C759)
+                          : const Color(0xFF007AFF),
+                      size: 19,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          latestTx != null
+                              ? "${latestTx.type == TransactionType.income ? '+' : '-'} Rp ${NumberFormat('#,##0', 'id_ID').format(latestTx.amount)}"
+                              : "Auto-Catat Notif Siap",
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          latestTx != null
+                              ? "${(latestTx.note != null && latestTx.note!.isNotEmpty) ? latestTx.note : latestTx.category} • Auto-catat aktif"
+                              : "Membaca SMS Bank & Notifikasi E-Wallet",
+                          style: TextStyle(
+                            color: secondaryTextColor,
+                            fontSize: 10.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF34C759).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      "Aktif",
+                      style: TextStyle(
+                        color: Color(0xFF34C759),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Hairline Divider
+            Divider(
+              height: 1,
+              thickness: 0.5,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.08),
+            ),
+            const SizedBox(height: 8),
+
+            // Footer Button: Buka Notifikasi Lainnya & Scanner
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                _toggleNotifMorph(false);
+                widget.onOpenAutoNotif?.call();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF007AFF).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.list_bullet_below_rectangle,
+                        color: Color(0xFF007AFF),
+                        size: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Lihat Notifikasi Lainnya",
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      CupertinoIcons.chevron_forward,
+                      color: secondaryTextColor.withValues(alpha: 0.6),
+                      size: 13,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildTransactionRow(
     TransactionModel tx, {

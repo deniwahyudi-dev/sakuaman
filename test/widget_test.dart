@@ -145,19 +145,24 @@ void main() {
     final customScrollViewAfter = tester.widget<CustomScrollView>(find.byType(CustomScrollView));
     expect(customScrollViewAfter.physics, isA<BouncingScrollPhysics>());
 
-    // Verify bell icon exists and supports tarik melar jelly touch
+    // Verify bell icon exists and morphs fluidly into recent notifications popover
     expect(find.byIcon(CupertinoIcons.bell_fill), findsOneWidget);
-    final bellDragGesture = await tester.startGesture(tester.getCenter(find.byIcon(CupertinoIcons.bell_fill)));
-    await tester.pump();
-    await bellDragGesture.moveBy(const Offset(-15, 10));
-    await tester.pump(const Duration(milliseconds: 50));
-    await bellDragGesture.up();
-    await tester.pump();
+    expect(find.text('Notifikasi Terbaru'), findsNothing);
 
-    // Tap bell icon to navigate to notification listener screen
-    await tester.tap(find.byIcon(CupertinoIcons.bell_fill));
+    // Tap bell icon to morph into notification popover
+    await tester.tap(find.byIcon(CupertinoIcons.bell_fill), warnIfMissed: false);
+    for (int i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 30));
+    }
+
+    // Verify Notifikasi Terbaru popover opened
+    expect(find.text('Notifikasi Terbaru'), findsOneWidget);
+    expect(find.text('Lihat Notifikasi Lainnya'), findsOneWidget);
+
+    // Tap "Lihat Notifikasi Lainnya" to navigate to full NotificationListenerScreen
+    await tester.tap(find.text('Lihat Notifikasi Lainnya'), warnIfMissed: false);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 600));
 
     // Verify NotificationListenerScreen opened
     expect(find.text('Auto-Catat Notif HP'), findsOneWidget);
@@ -243,5 +248,40 @@ void main() {
     final afterScrollPillPos = tester.getTopLeft(find.text('SakuAman'));
     expect(afterScrollPillPos.dy, equals(initialPillPos.dy));
     expect(afterScrollPillPos.dx, equals(initialPillPos.dx));
+  });
+
+  testWidgets('Top-right Settings button in ProfileScreen morphs fluidly into Apple Glass Popover menu', (WidgetTester tester) async {
+    await tester.pumpWidget(const SakuAmanApp());
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // 1. Switch to Akun tab
+    await tester.tap(find.text('Akun').first, warnIfMissed: false);
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump(); // Let post-frame layout seed the morph measurement
+
+    // 2. Settings button (glyph) should be visible in resting circular state
+    expect(find.byIcon(CupertinoIcons.gear_alt_fill), findsWidgets);
+    expect(find.text('Pengaturan Tampilan'), findsNothing);
+
+    // 3. Tap the Settings button
+    await tester.tap(find.byIcon(CupertinoIcons.gear_alt_fill).first, warnIfMissed: false);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 600)); // Allow fluid spring to settle completely
+
+    // 4. LiquidGlassMorph expands into popover menu
+    expect(find.text('Pengaturan Tampilan'), findsOneWidget);
+    expect(find.text('Penanda FPS HUD'), findsOneWidget);
+    expect(find.text('Smart 1 FPS Idle'), findsOneWidget);
+    expect(find.text('Mode Gelap'), findsOneWidget);
+    expect(find.text('Pengaturan Lanjutan'), findsOneWidget);
+
+    // 5. Tap outside on the fullscreen barrier to dismiss and morph back
+    await tester.tapAt(const Offset(100, 450));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // 6. Morphed menu collapses back into glyph button
+    expect(find.text('Pengaturan Tampilan'), findsNothing);
+    expect(find.byIcon(CupertinoIcons.gear_alt_fill), findsWidgets);
   });
 }
