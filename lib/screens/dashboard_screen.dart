@@ -514,23 +514,8 @@ class _DashboardViewState extends State<_DashboardView> {
           ),
         ),
 
-        // ── FULLSCREEN BACKDROP BARRIER SAAT POPOVER NOTIFIKASI TERBUKA ──
-        if (_isNotifMenuOpen)
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _toggleNotifMorph(false),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                color: Colors.black.withValues(
-                  alpha: widget.isDark ? 0.35 : 0.15,
-                ),
-              ),
-            ),
-          ),
-
         // ── POJOK KIRI ATAS: FLOATING LIQUID PILL [ 💳 SakuAman ] ──
+        // Diposisikan sebelum backdrop barrier agar ikut ter-defokus halus saat popover terbuka
         Positioned(
           top: topIslandPadding,
           left: 20,
@@ -578,6 +563,15 @@ class _DashboardViewState extends State<_DashboardView> {
           ),
         ),
 
+        // ── INVISIBLE TAP-TO-DISMISS BARRIER (TANPA BLUR / DEFOKUS, KACA TETAP JERNIH) ──
+        if (_isNotifMenuOpen)
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _toggleNotifMorph(false),
+            ),
+          ),
+
         // ── POJOK KANAN ATAS: LONCENG NOTIFIKASI FLUID MORPH [ 🔔 -> POPOVER NOTIFIKASI ] ──
         if (widget.onOpenAutoNotif != null)
           Builder(
@@ -585,7 +579,7 @@ class _DashboardViewState extends State<_DashboardView> {
               final double screenWidth = MediaQuery.sizeOf(context).width;
               final double menuWidth = screenWidth - 40.0;
 
-              const double notifMenuHeight = 175.0;
+              const double notifMenuHeight = 182.0;
 
               return Positioned(
                 top: topIslandPadding,
@@ -604,33 +598,38 @@ class _DashboardViewState extends State<_DashboardView> {
                           cornerRadius: _isNotifMenuOpen ? 24 : 19,
                           clipQuality: LiquidGlassClipQuality.exact,
                         ),
+                        // Golden Ratio Apple Frosted Liquid Glass (iOS 26 Style):
+                        // Menahan tubrukan teks di belakang, tapi tetap memancarkan refraksi warna cairan
                         color: widget.isDark
                             ? (_isNotifMenuOpen
-                                ? const Color(0xFF141927).withValues(alpha: 0.55)
+                                ? const Color(0xFF141927).withValues(alpha: 0.72)
                                 : Colors.white.withValues(alpha: 0.045))
                             : (_isNotifMenuOpen
-                                ? Colors.white.withValues(alpha: 0.60)
+                                ? Colors.white.withValues(alpha: 0.75)
                                 : Colors.white.withValues(alpha: 0.12)),
-                        blur: _isNotifMenuOpen ? 8.0 : 3.5,
-                        refractionIndex: 1.24,
-                        refractionWidth: 12.0,
+                        blur: _isNotifMenuOpen ? 25.0 : 3.5,
+                        refractionIndex: 1.25,
+                        refractionWidth: 14.0,
                         magnification: 1.05,
                         dispersion: 1.8,
                         specular: LiquidGlassLight.specular(
-                          thickness: 3.2,
-                          intensity: widget.isDark ? 1.20 : 1.30,
+                          thickness: _isNotifMenuOpen ? 4.5 : 3.2,
+                          sharpness: 0.65,
+                          intensity: widget.isDark ? 1.45 : 1.55,
                         ),
                         glow: LiquidGlassLight.glow(
-                          thickness: 5.0,
-                          intensity: widget.isDark ? 0.20 : 0.15,
+                          thickness: _isNotifMenuOpen ? 8.0 : 5.0,
+                          intensity: _isNotifMenuOpen
+                              ? (widget.isDark ? 0.25 : 0.18)
+                              : (widget.isDark ? 0.20 : 0.15),
                           color: const Color(0xFF007AFF),
                         ),
                         shadow: LiquidGlassShadow(
-                          blur: _isNotifMenuOpen ? 20 : 6,
-                          opacity: widget.isDark ? 0.28 : 0.06,
-                          color: Colors.black,
+                          blur: _isNotifMenuOpen ? 24 : 6,
+                          opacity: widget.isDark ? 0.35 : 0.14,
+                          color: widget.isDark ? Colors.black : const Color(0xFF0F172A),
                           offset: _isNotifMenuOpen
-                              ? const Offset(0, 6)
+                              ? const Offset(0, 8)
                               : const Offset(0, 2),
                         ),
                       ),
@@ -726,13 +725,18 @@ class _DashboardViewState extends State<_DashboardView> {
     return SizedBox(
       key: const ValueKey<String>('notif_menu'),
       width: menuWidth,
-      height: 175,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      height: 182,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             // Header: Judul & Tombol Tutup (X)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -788,13 +792,13 @@ class _DashboardViewState extends State<_DashboardView> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: isDark
-                    ? Colors.white.withValues(alpha: 0.04)
-                    : Colors.black.withValues(alpha: 0.03),
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.white.withValues(alpha: 0.50),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.05),
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : const Color(0xFF0F172A).withValues(alpha: 0.08),
                   width: 0.8,
                 ),
               ),
@@ -938,7 +942,9 @@ class _DashboardViewState extends State<_DashboardView> {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildTransactionRow(

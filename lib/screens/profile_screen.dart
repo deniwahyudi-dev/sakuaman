@@ -504,23 +504,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
 
-        // ── FULLSCREEN BACKDROP BARRIER SAAT POPOVER PENGATURAN TERBUKA ──
-        if (_isSettingsMenuOpen)
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _toggleSettingsMorph(false),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                color: Colors.black.withValues(
-                  alpha: isDark ? 0.35 : 0.15,
-                ),
-              ),
-            ),
-          ),
-
         // ── POJOK KIRI ATAS: FLOATING LIQUID PILL [ 👤 Profil Deni ] ──
+        // Diposisikan sebelum backdrop barrier agar ikut ter-defokus halus saat popover terbuka
         Positioned(
           top: topIslandPadding,
           left: 20,
@@ -567,13 +552,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
 
+        // ── INVISIBLE TAP-TO-DISMISS BARRIER (TANPA BLUR / DEFOKUS, KACA TETAP JERNIH) ──
+        if (_isSettingsMenuOpen)
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _toggleSettingsMorph(false),
+            ),
+          ),
+
         // ── POJOK KANAN ATAS: TOMBOL PENGATURAN ELASTIS MORPH [ ⚙️ -> POPOVER MENU ] ──
         Builder(
           builder: (context) {
             final double screenWidth = MediaQuery.sizeOf(context).width;
             final double menuWidth = screenWidth - 40.0; // Lebar membentang sejajar kiri dengan Profil Deni (left: 20)
 
-            const double menuHeight = 210.0;
+            const double menuHeight = 274.0;
 
             return Positioned(
               top: topIslandPadding,
@@ -583,45 +577,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  LiquidGlassMorph(
-                    alignment: Alignment.topRight,
-                    motion: LiquidGlassMorphMotion.fluid,
-                    smoothness: 28,
-                    style: LiquidGlassStyle(
-                      shape: LiquidGlassShape.continuousRoundedRectangle(
-                        cornerRadius: _isSettingsMenuOpen ? 24 : 19,
-                        clipQuality: LiquidGlassClipQuality.exact,
+                    LiquidGlassMorph(
+                      alignment: Alignment.topRight,
+                      motion: LiquidGlassMorphMotion.fluid,
+                      smoothness: 28,
+                      style: LiquidGlassStyle(
+                        shape: LiquidGlassShape.continuousRoundedRectangle(
+                          cornerRadius: _isSettingsMenuOpen ? 24 : 19,
+                          clipQuality: LiquidGlassClipQuality.exact,
+                        ),
+                        // Golden Ratio Apple Frosted Liquid Glass (iOS 26 Style):
+                        // Menahan tubrukan teks di belakang, tapi tetap memancarkan refraksi warna cairan
+                        color: isDark
+                            ? (_isSettingsMenuOpen
+                                ? const Color(0xFF141927).withValues(alpha: 0.72)
+                                : Colors.white.withValues(alpha: 0.045))
+                            : (_isSettingsMenuOpen
+                                ? Colors.white.withValues(alpha: 0.75)
+                                : Colors.white.withValues(alpha: 0.12)),
+                        blur: _isSettingsMenuOpen ? 25.0 : 3.5,
+                        refractionIndex: 1.25,
+                        refractionWidth: 14.0,
+                        magnification: 1.05,
+                        dispersion: 1.8,
+                        specular: LiquidGlassLight.specular(
+                          thickness: _isSettingsMenuOpen ? 4.5 : 3.2,
+                          sharpness: 0.65,
+                          intensity: isDark ? 1.45 : 1.55,
+                        ),
+                        glow: LiquidGlassLight.glow(
+                          thickness: _isSettingsMenuOpen ? 8.0 : 5.0,
+                          intensity: _isSettingsMenuOpen
+                              ? (isDark ? 0.25 : 0.18)
+                              : (isDark ? 0.20 : 0.15),
+                          color: const Color(0xFF007AFF),
+                        ),
+                        shadow: LiquidGlassShadow(
+                          blur: _isSettingsMenuOpen ? 24 : 6,
+                          opacity: isDark ? 0.35 : 0.14,
+                          color: isDark ? Colors.black : const Color(0xFF0F172A),
+                          offset: _isSettingsMenuOpen
+                              ? const Offset(0, 8)
+                              : const Offset(0, 2),
+                        ),
                       ),
-                      color: isDark
-                          ? (_isSettingsMenuOpen
-                              ? const Color(0xFF141927).withValues(alpha: 0.55)
-                              : Colors.white.withValues(alpha: 0.045))
-                          : (_isSettingsMenuOpen
-                              ? Colors.white.withValues(alpha: 0.60)
-                              : Colors.white.withValues(alpha: 0.12)),
-                      blur: _isSettingsMenuOpen ? 8.0 : 3.5,
-                      refractionIndex: 1.24,
-                      refractionWidth: 12.0,
-                      magnification: 1.05,
-                      dispersion: 1.8,
-                      specular: LiquidGlassLight.specular(
-                        thickness: 3.2,
-                        intensity: isDark ? 1.20 : 1.30,
-                      ),
-                      glow: LiquidGlassLight.glow(
-                        thickness: 5.0,
-                        intensity: isDark ? 0.20 : 0.15,
-                        color: const Color(0xFF007AFF),
-                      ),
-                      shadow: LiquidGlassShadow(
-                        blur: _isSettingsMenuOpen ? 20 : 6,
-                        opacity: isDark ? 0.28 : 0.06,
-                        color: Colors.black,
-                        offset: _isSettingsMenuOpen
-                            ? const Offset(0, 6)
-                            : const Offset(0, 2),
-                      ),
-                    ),
                     onEnd: () {
                       if (_wide != _isSettingsMenuOpen) {
                         setState(() => _wide = _isSettingsMenuOpen);
@@ -685,13 +684,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return SizedBox(
       key: const ValueKey<String>('menu'),
       width: menuWidth,
-      height: 210,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      height: 274,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               // Header: Judul & Tombol Tutup (X)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -850,7 +854,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
         ),
-      );
+      ),
+    ),
+  );
   }
 
   Widget _buildMorphSwitchRow({

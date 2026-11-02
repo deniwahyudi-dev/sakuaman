@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -265,18 +266,18 @@ class _MainTabScreenState extends State<MainTabScreen> {
         data: SakuTheme.getTheme(isDark: _isDark),
         child: LiquidGlassScaffold(
           backgroundColor: Colors.transparent,
-          // ── FULL APPLE DYNAMIC ADAPTIVITY (LUMINANCE SAMPLING & REAL-TIME CONTRAST) ──
-          adaptivity: LiquidGlassScaffoldAdaptivity(
-            LiquidGlassAdaptivity(
-              glassColorOnDark: const Color(0xFF0F1626).withValues(alpha: 0.75),
-              contentColorOnDark: const Color(0xFF94A3B8),
-              glassColorOnLight: Colors.white.withValues(alpha: 0.82),
-              contentColorOnLight: const Color(0xFF64748B),
-              continuousGlassColor: true,
-              duration: const Duration(milliseconds: 280),
-            ),
-            systemChrome: LiquidGlassSystemChrome.none,
-          ),
+              // ── FULL APPLE DYNAMIC ADAPTIVITY (LUMINANCE SAMPLING & REAL-TIME CONTRAST) ──
+              adaptivity: LiquidGlassScaffoldAdaptivity(
+                LiquidGlassAdaptivity(
+                  glassColorOnDark: const Color(0xFF0F1626).withValues(alpha: 0.75),
+                  contentColorOnDark: const Color(0xFF94A3B8),
+                  glassColorOnLight: Colors.white.withValues(alpha: 0.82),
+                  contentColorOnLight: const Color(0xFF64748B),
+                  continuousGlassColor: true,
+                  duration: const Duration(milliseconds: 280),
+                ),
+                systemChrome: LiquidGlassSystemChrome.none,
+              ),
         body: Listener(
           behavior: HitTestBehavior.translucent,
           onPointerDown: (_) => ProMotionManager.instance.reportInteraction(),
@@ -313,7 +314,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
                 },
               ),
 
-              // Background barrier to dismiss morph menu when open
+              // Invisible tap-outside barrier to dismiss morph menu when open (Tanpa Defokus / Blur)
               if (_isMorphOpen)
                 Positioned.fill(
                   child: GestureDetector(
@@ -384,21 +385,10 @@ class _MainTabScreenState extends State<MainTabScreen> {
           itemStyle: LiquidGlassTabItemStyle(
             // Saat dilewati kaca cembung di Mode Gelap, icon & label menyala Biru Elektrik Apple iOS
             // (0xFF0A84FF di Dark Mode, 0xFF007AFF di Light Mode)
-            // Saat popover terbuka, warna meredup lembut (defocused ala iOS)
-            selectedColor: _isDark
-                ? (_isAnyPopoverOpen
-                    ? const Color(0xFF0A84FF).withValues(alpha: 0.35)
-                    : const Color(0xFF0A84FF))
-                : (_isAnyPopoverOpen
-                    ? const Color(0xFF007AFF).withValues(alpha: 0.35)
-                    : const Color(0xFF007AFF)),
+            selectedColor: _isDark ? const Color(0xFF0A84FF) : const Color(0xFF007AFF),
             unselectedColor: _isDark
-                ? (_isAnyPopoverOpen
-                    ? const Color(0xFF94A3B8).withValues(alpha: 0.25)
-                    : const Color(0xFF94A3B8))
-                : (_isAnyPopoverOpen
-                    ? const Color(0xFF64748B).withValues(alpha: 0.25)
-                    : const Color(0xFF64748B)),
+                ? const Color(0xFF94A3B8)
+                : const Color(0xFF64748B),
             iconSize: 22,
             underGlassIconSize: 28, // Kaca membesar icon!
             labelFontSize: 10.5,
@@ -416,18 +406,18 @@ class _MainTabScreenState extends State<MainTabScreen> {
               magnification: 0.87,
             ),
             color: _isDark
-                ? Colors.white.withValues(alpha: _isAnyPopoverOpen ? 0.015 : 0.04)
-                : const Color(0xFF0F172A).withValues(alpha: _isAnyPopoverOpen ? 0.01 : 0.03),
+                ? Colors.white.withValues(alpha: 0.04)
+                : const Color(0xFF0F172A).withValues(alpha: 0.03),
             glassStyle: LiquidGlassStyle(
               shape: const LiquidGlassShape(),
               // Garis rim specular putih tipis, tajam & bersih
               specular: LiquidGlassLight.specular(
                 thickness: _isDark ? 1.8 : 3.5,
-                intensity: _isAnyPopoverOpen ? 0.30 : (_isDark ? 1.10 : 1.0),
+                intensity: _isDark ? 1.10 : 1.0,
               ),
               // Pendaran putih kristal sangat tipis & transparan di dalam kaca cembung
               color: _isDark
-                  ? Colors.white.withValues(alpha: _isAnyPopoverOpen ? 0.01 : 0.04)
+                  ? Colors.white.withValues(alpha: 0.04)
                   : Colors.transparent,
               blur: 0,
               refractionIndex: 1.03,
@@ -437,83 +427,55 @@ class _MainTabScreenState extends State<MainTabScreen> {
               dispersion: _isDark ? 0.3 : 0.2,
               // Bayangan kontak natural halus
               shadow: LiquidGlassShadow(
-                blur: _isAnyPopoverOpen ? 2 : 6,
-                opacity: _isAnyPopoverOpen ? 0.04 : 0.15,
+                blur: 6,
+                opacity: _isDark ? 0.15 : 0.15,
                 color: Colors.black,
                 offset: const Offset(0, 2),
               ),
             ),
           ),
-          style: _isAnyPopoverOpen
-              ? crystalGlassStyle.copyWith(
-                  color: _isDark
-                      ? const Color(0xFF0F1626).withValues(alpha: 0.35)
-                      : Colors.white.withValues(alpha: 0.38),
-                  blur: 10.0,
-                  shadow: const LiquidGlassShadow(
-                    blur: 3,
-                    opacity: 0.04,
-                    color: Colors.black,
-                    offset: Offset(0, 1),
-                  ),
-                )
-              : crystalGlassStyle,
+          style: crystalGlassStyle,
         ),
 
         // TOMBOL '+' BERSIH DAN SEJAJAR DENGAN EFEK TAHAN MELAR HALUS & REFINED (SUBTLE JELLY)
-        // Ikut meredup ala iOS saat popover atas (notifikasi / profil) sedang membesar
-        bottomNavigationBarAction: AnimatedOpacity(
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeOutCubic,
-          opacity: _isTopPopoverOpen ? 0.38 : 1.0,
-          child: GestureDetector(
-            behavior: _isTopPopoverOpen
-                ? HitTestBehavior.opaque
-                : HitTestBehavior.deferToChild,
-            onTap: _isTopPopoverOpen ? _dismissAllPopovers : null,
-            child: AbsorbPointer(
-              absorbing: _isTopPopoverOpen,
-              child: SizedBox(
-                width: plusSize,
-                height: plusSize,
-                child: LiquidGlassLens(
-                  style: crystalGlassStyle.copyWith(
-                    shape: const LiquidGlassShape.roundedRectangle(
-                      cornerRadius: 32,
-                    ),
-                  ),
-                  // Sentuhan melar lembut & terkendali (tidak lebay agar tidak bertabrakan dengan navbar 4 tombol)
-                  touch: const LiquidGlassTouch(
-                    flex: LiquidGlassFlex(
-                      stretch: 6.0,          // Melar lembut & proporsional (maks 6px, aman & elegan)
-                      squeeze: 0.28,         // Deformasi volume halus tanpa gepeng
-                      lean: 0.18,            // Mengikuti jari secukupnya
-                      grip: 0.50,            // Cengkeraman seimbang
-                      compressInward: true,  // Tetap elastis kenyal jika ditekan ke dalam
-                      holdScale: 0.025,      // Mengembang halus (+2.5%) saat ditahan
-                      tapScale: 0.02,        // Haptic micro-pop renyah saat tap
-                    ),
-                  ),
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      if (_isTopPopoverOpen) {
-                        _dismissAllPopovers();
-                        return;
-                      }
-                      setState(() {
-                        _isMorphOpen = !_isMorphOpen;
-                      });
-                    },
-                    child: const Center(
-                      child: Icon(
-                        CupertinoIcons.plus,
-                        color: Color(0xFF007AFF),
-                        size: 29,
-                      ),
-                    ),
-                  ),
+        bottomNavigationBarAction: SizedBox(
+          width: plusSize,
+          height: plusSize,
+          child: LiquidGlassLens(
+            style: crystalGlassStyle.copyWith(
+              shape: const LiquidGlassShape.roundedRectangle(
+                cornerRadius: 32,
+              ),
+            ),
+            // Sentuhan melar lembut & terkendali (tidak lebay agar tidak bertabrakan dengan navbar 4 tombol)
+            touch: const LiquidGlassTouch(
+              flex: LiquidGlassFlex(
+                stretch: 6.0,          // Melar lembut & proporsional (maks 6px, aman & elegan)
+                squeeze: 0.28,         // Deformasi volume halus tanpa gepeng
+                lean: 0.18,            // Mengikuti jari secukupnya
+                grip: 0.50,            // Cengkeraman seimbang
+                compressInward: true,  // Tetap elastis kenyal jika ditekan ke dalam
+                holdScale: 0.025,      // Mengembang halus (+2.5%) saat ditahan
+                tapScale: 0.02,        // Haptic micro-pop renyah saat tap
+              ),
+            ),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (_isTopPopoverOpen) {
+                  _dismissAllPopovers();
+                  return;
+                }
+                HapticFeedback.selectionClick();
+                setState(() {
+                  _isMorphOpen = !_isMorphOpen;
+                });
+              },
+              child: const Center(
+                child: Icon(
+                  CupertinoIcons.plus,
+                  color: Color(0xFF007AFF),
+                  size: 29,
                 ),
               ),
             ),
@@ -523,7 +485,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
       ),
     ),
   );
-  }
+}
 
   // Kapsul Penanda Real-Time ProMotion (1 FPS / 60 FPS / 144 FPS)
   Widget _buildProMotionHudPill() {
