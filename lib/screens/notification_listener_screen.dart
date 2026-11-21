@@ -4,8 +4,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:liquid_glass_easy/liquid_glass_easy.dart';
+import 'package:notification_listener_service/notification_listener_service.dart';
 import '../models/transaction.dart';
 import '../services/notification_parser.dart';
+import '../services/native_notification_service.dart';
 import '../widgets/bouncy_touch_wrapper.dart';
 import '../widgets/ambient_mesh_background.dart';
 import '../theme/saku_theme.dart';
@@ -26,9 +28,10 @@ class NotificationListenerScreen extends StatefulWidget {
 }
 
 class _NotificationListenerScreenState extends State<NotificationListenerScreen> {
-  bool _isServiceEnabled = true;
+  bool _isServiceEnabled = false; // Default off, will request permission when turned on
   bool _isInteractingTopBar = false;
   final TextEditingController _customNotifController = TextEditingController();
+  final NativeNotificationService _nativeService = NativeNotificationService();
 
   // Dynamic Floating Glass Toast state
   TransactionModel? _detectedToast;
@@ -112,10 +115,78 @@ class _NotificationListenerScreenState extends State<NotificationListenerScreen>
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _checkServiceStatus();
+  }
+
+  Future<void> _checkServiceStatus() async {
+    try {
+      final bool isGranted =
+          await NotificationListenerService.isPermissionGranted();
+      final bool isListening = _nativeService.isListening;
+
+      if (isGranted && !isListening) {
+        await _nativeService.initialize(
+            onTransactionDetected: _onTransactionReceived);
+        _nativeService.startListening();
+      }
+
+      if (mounted) {
+        setState(() {
+          _isServiceEnabled = isGranted || isListening;
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
   void dispose() {
     _toastTimer?.cancel();
     _customNotifController.dispose();
+    // PERBAIKAN PENTING: Jangan matikan service listener di sini.
+    // Service background harus tetap aktif mendengarkan notifikasi m-banking
+    // saat user keluar dari layar ini atau saat HP terkunci.
     super.dispose();
+  }
+
+  void _onTransactionReceived(TransactionModel tx) {
+    if (mounted) {
+      widget.onTransactionDetected(tx);
+      _triggerSuccessToast(tx);
+    }
+  }
+
+  Future<void> _toggleNativeService(bool enable) async {
+    HapticFeedback.selectionClick();
+    if (enable) {
+      final isGranted = await _nativeService.initialize(onTransactionDetected: _onTransactionReceived);
+      if (isGranted) {
+        _nativeService.startListening();
+        setState(() {
+          _isServiceEnabled = true;
+        });
+        _triggerSuccessToast(TransactionModel(
+            id: 'system',
+            title: 'Sistem Terhubung',
+            amount: 0,
+            type: TransactionType.income,
+            category: 'System',
+            date: DateTime.now(),
+            source: 'Saku',
+            note: 'Mendengarkan notifikasi secara native...'));
+      } else {
+        _triggerErrorToast("Izin Notification Access ditolak.");
+        setState(() {
+          _isServiceEnabled = false;
+        });
+      }
+    } else {
+      _nativeService.stopListening();
+      setState(() {
+        _isServiceEnabled = false;
+      });
+    }
   }
 
   void _triggerSuccessToast(TransactionModel tx) {
@@ -214,7 +285,7 @@ class _NotificationListenerScreenState extends State<NotificationListenerScreen>
     final bool isDark = widget.isDark;
     final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final secondaryTextColor =
-        isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+        isDark ? const Color(0xFF8E8E93) : const Color(0xFF64748B);
 
     final double statusBarHeight = MediaQuery.paddingOf(context).top;
     final double topIslandPadding = statusBarHeight > 0 ? statusBarHeight + 6 : 8.0;
@@ -452,7 +523,7 @@ class _NotificationListenerScreenState extends State<NotificationListenerScreen>
               blurCurve: Curves.easeInQuart,
               curve: Curves.easeOutCubic,
               color: isDark
-                  ? const Color(0xFF090C15).withValues(alpha: 0.40)
+                  ? Colors.black.withValues(alpha: 0.50)
                   : Colors.white.withValues(alpha: 0.45),
             ),
           ),
@@ -544,12 +615,7 @@ class _NotificationListenerScreenState extends State<NotificationListenerScreen>
                           touch: jellyTouch,
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setState(() {
-                                _isServiceEnabled = !_isServiceEnabled;
-                              });
-                            },
+                            onTap: () => _toggleNativeService(!_isServiceEnabled),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 10),
                               child: Center(
@@ -713,12 +779,7 @@ class _NotificationListenerScreenState extends State<NotificationListenerScreen>
                   CupertinoSwitch(
                     value: _isServiceEnabled,
                     activeTrackColor: const Color(0xFF34C759),
-                    onChanged: (val) {
-                      HapticFeedback.selectionClick();
-                      setState(() {
-                        _isServiceEnabled = val;
-                      });
-                    },
+                    onChanged: (val) => _toggleNativeService(val),
                   ),
                 ],
               ),

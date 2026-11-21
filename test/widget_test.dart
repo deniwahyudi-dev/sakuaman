@@ -95,7 +95,7 @@ void main() {
     // Tap on Riwayat tab
     await tester.tap(find.text('Riwayat').first, warnIfMissed: false);
     await tester.pump(const Duration(milliseconds: 350));
-    expect(find.text('Riwayat Kas'), findsOneWidget);
+    expect(find.text('Riwayat Transaksi'), findsOneWidget);
 
     // Tap on Analisa AI tab
     await tester.tap(find.text('Analisa AI').first, warnIfMissed: false);
@@ -226,6 +226,8 @@ void main() {
     expect(find.text('Semua'), findsNothing);
 
     // Tap 'Lihat Semua' -> switches to History tab
+    await tester.ensureVisible(find.text('Lihat Semua'));
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.text('Lihat Semua'));
     await tester.pump(const Duration(milliseconds: 350));
 

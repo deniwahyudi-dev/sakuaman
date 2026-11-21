@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
@@ -81,10 +82,11 @@ class _DashboardView extends StatefulWidget {
 }
 
 class _DashboardViewState extends State<_DashboardView> {
-  bool _isInteractingTopBar = false;
   bool _isInteractingBalanceCard = false;
   bool _isNotifMenuOpen = false;
   bool _wideNotif = false;
+  bool _isLoading = false;
+  Timer? _loadingTimer;
 
   @override
   void initState() {
@@ -103,6 +105,7 @@ class _DashboardViewState extends State<_DashboardView> {
 
   @override
   void dispose() {
+    _loadingTimer?.cancel();
     widget.dismissSignal?.removeListener(_handleDismissSignal);
     super.dispose();
   }
@@ -140,6 +143,14 @@ class _DashboardViewState extends State<_DashboardView> {
 
   double get _balance => _totalIncome - _totalExpense;
 
+  String get _fullDateFormatted {
+    try {
+      return DateFormat('EEEE, d MMMM', 'id_ID').format(DateTime.now());
+    } catch (_) {
+      return DateFormat('EEEE, d MMMM').format(DateTime.now());
+    }
+  }
+
   String get _todayFormatted {
     try {
       return DateFormat('EEE, d MMM', 'id_ID').format(DateTime.now());
@@ -148,8 +159,48 @@ class _DashboardViewState extends State<_DashboardView> {
     }
   }
 
+  String _formatRelTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inHours < 12 && now.day == dt.day) {
+      return DateFormat('HH:mm').format(dt);
+    } else if (diff.inDays == 1 || (diff.inHours < 48 && now.day - dt.day == 1)) {
+      return 'Kemarin';
+    } else {
+      try {
+        return DateFormat('d MMM', 'id_ID').format(dt);
+      } catch (_) {
+        return '${dt.day}/${dt.month}';
+      }
+    }
+  }
+
   List<TransactionModel> get _recentTransactions =>
       widget.transactions.take(5).toList();
+
+  int get _savingsRatio {
+    if (_totalIncome <= 0) return 0;
+    final ratio = ((_totalIncome - _totalExpense) / _totalIncome * 100).round();
+    return ratio.clamp(0, 100);
+  }
+
+  MapEntry<String, double> get _topExpenseCategory {
+    final expenses = widget.transactions
+        .where((tx) => tx.type == TransactionType.expense);
+    if (expenses.isEmpty) return const MapEntry('Belanja', 0.0);
+
+    final map = <String, double>{};
+    for (var tx in expenses) {
+      map[tx.category] = (map[tx.category] ?? 0.0) + tx.amount;
+    }
+    var topCat = map.entries.first;
+    for (var entry in map.entries) {
+      if (entry.value > topCat.value) {
+        topCat = entry;
+      }
+    }
+    return topCat;
+  }
 
   void _openAddSheet() {
     showModalBottomSheet(
@@ -167,93 +218,8 @@ class _DashboardViewState extends State<_DashboardView> {
   Widget build(BuildContext context) {
     final textColor = widget.isDark ? Colors.white : const Color(0xFF0F172A);
     final secondaryTextColor = widget.isDark
-        ? const Color(0xFF94A3B8)
+        ? const Color(0xFF8E8E93)
         : const Color(0xFF64748B);
-
-    // Formula Kaca Kristal Cair Murni (Ultra-Clear Liquid Glass, Low Opacity & Crisp Blur)
-    final pillGlassStyle = LiquidGlassStyle(
-      shape: const LiquidGlassShape.continuousRoundedRectangle(
-        cornerRadius: 18,
-      ),
-      // Opacity diturunkan sangat jernih (translucent putih bening murni, bebas kabut gelap)
-      color: widget.isDark
-          ? Colors.white.withValues(alpha: 0.045)
-          : Colors.white.withValues(alpha: 0.12),
-      // Blur dipangkas agar efek lensa cair dan konten di baliknya tampak super jernih & tajam
-      blur: 3.5,
-      // Refraksi & magnifikasi optik khas fluida air (Apple Liquid iOS)
-      refractionIndex: 1.24,
-      refractionWidth: 12.0,
-      magnification: 1.05,
-      dispersion: 1.8,
-      specular: LiquidGlassLight.specular(
-        thickness: 3.2,
-        intensity: widget.isDark ? 1.20 : 1.30,
-      ),
-      glow: LiquidGlassLight.glow(
-        thickness: 5.0,
-        intensity: widget.isDark ? 0.20 : 0.15,
-        color: const Color(0xFF007AFF),
-      ),
-      shadow: LiquidGlassShadow(
-        blur: 6,
-        opacity: widget.isDark ? 0.08 : 0.05,
-        color: Colors.black,
-        offset: const Offset(0, 2),
-      ),
-    );
-
-    final circleGlassStyle = LiquidGlassStyle(
-      shape: const LiquidGlassShape.roundedRectangle(
-        cornerRadius: 19,
-      ),
-      // Opacity diturunkan sangat jernih
-      color: widget.isDark
-          ? Colors.white.withValues(alpha: 0.045)
-          : Colors.white.withValues(alpha: 0.12),
-      // Blur dipangkas agar fluida jernih
-      blur: 3.5,
-      refractionIndex: 1.24,
-      refractionWidth: 12.0,
-      magnification: 1.05,
-      dispersion: 1.8,
-      specular: LiquidGlassLight.specular(
-        thickness: 3.2,
-        intensity: widget.isDark ? 1.20 : 1.30,
-      ),
-      glow: LiquidGlassLight.glow(
-        thickness: 5.0,
-        intensity: widget.isDark ? 0.20 : 0.15,
-        color: const Color(0xFF007AFF),
-      ),
-      shadow: LiquidGlassShadow(
-        blur: 6,
-        opacity: widget.isDark ? 0.08 : 0.05,
-        color: Colors.black,
-        offset: const Offset(0, 2),
-      ),
-    );
-
-    // Dynamic jelly-elastic touch physics for floating top bar elements (subtle & refined)
-    const jellyTouch = LiquidGlassTouch(
-      flex: LiquidGlassFlex(
-        stretch: 11,           // Melar lembut & proporsional (tidak lebay)
-        squeeze: 0.40,         // Penipisan volume halus
-        lean: 0.28,            // Mengikuti jari secara wajar
-        grip: 0.60,            // Cengkeraman seimbang
-        compressInward: true,  // Tetap elastis jika ditekan ke dalam
-        holdScale: 0.02,       // Sedikit mengembang halus (+2%) saat disentuh
-        tapScale: 0.018,       // Haptic pop renyah saat klik cepat
-        maxPull: 26,           // Batas tarikan aman agar tidak melar berlebihan
-        advanced: LiquidGlassFlexAdvanced(
-          childFollow: 0.45,     // Konten icon & text tetap proporsional (tidak distorsi)
-          refractionBoost: 0.12, // Kilau optik lembut dan mewah
-          stiffness: 320,        // Pegas kencang & responsif
-          damping: 22,           // Stabil saat ditahan/ditarik
-          releaseDamping: 18,    // Langsung membal bersih tanpa getaran/wobble berlebihan
-        ),
-      ),
-    );
 
     final double statusBarHeight = MediaQuery.paddingOf(context).top;
     final double topIslandPadding = statusBarHeight > 0 ? statusBarHeight + 6 : 8.0;
@@ -262,68 +228,59 @@ class _DashboardViewState extends State<_DashboardView> {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // ── KONTEN SCROLLABLE DI BAWAH KACA (FLOWS UNDERNEATH PINNED TOP BAR) ──
-          CustomScrollView(
-            physics: (_isInteractingTopBar || _isInteractingBalanceCard || _isNotifMenuOpen)
-                ? const NeverScrollableScrollPhysics()
-                : const BouncingScrollPhysics(),
-            slivers: [
-              // Top clearance so initial content sits right below the pinned floating top islands
-              SliverToBoxAdapter(
-                child: SizedBox(height: topIslandPadding + 44),
-              ),
+          // ── KONTEN SCROLLABLE DENGAN LIQUID SHIMMER SKELETON (ZERO JANK UNTUK HP KENTANG) ──
+          Positioned.fill(
+            child: AnimatedCrossFade(
+              duration: const Duration(milliseconds: 380),
+              firstCurve: Curves.easeOut,
+              secondCurve: Curves.easeIn,
+              crossFadeState: _isLoading
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              firstChild: _buildDashboardSkeleton(context, topIslandPadding),
+              secondChild: SizedBox(
+                width: MediaQuery.sizeOf(context).width,
+                height: MediaQuery.sizeOf(context).height,
+                child: CustomScrollView(
+                  physics: (_isInteractingBalanceCard || _isNotifMenuOpen)
+                      ? const NeverScrollableScrollPhysics()
+                      : const BouncingScrollPhysics(),
+                  slivers: [
+                    // Top clearance agar konten mulai tepat di bawah status bar & notif bell
+                    SliverToBoxAdapter(
+                      child: SizedBox(height: topIslandPadding + 6),
+                    ),
 
-                // ── LARGE TITLE "Beranda" & Sapaan Lega (Ikut Scroll Natural) ──
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Text(
-                      "Beranda",
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.8,
+                    // ── APPLE LARGE TITLE "Beranda" & TANGGAL OTENTIK IOS ──
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Halo, Deni • $_fullDateFormatted",
+                              style: TextStyle(
+                                color: secondaryTextColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              "Beranda",
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -1.0,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Text(
-                          "Halo, Deni",
-                          style: TextStyle(
-                            color: secondaryTextColor,
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: widget.isDark
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : Colors.black.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            _todayFormatted,
-                            style: TextStyle(
-                              color: secondaryTextColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
 
             // Liquid Balance Card
             SliverToBoxAdapter(
@@ -342,6 +299,13 @@ class _DashboardViewState extends State<_DashboardView> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 18)),
 
+            // ── BENTO GRID MODULAR STATS (ALA QCLAY & DELIBIX NURA) ──
+            SliverToBoxAdapter(
+              child: _buildBentoGrid(textColor, secondaryTextColor),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
             // ── TITLE SECTION: AKTIVITAS TERKINI & LIHAT SEMUA ALA APPLE WALLET ──
             SliverToBoxAdapter(
               child: Padding(
@@ -354,8 +318,8 @@ class _DashboardViewState extends State<_DashboardView> {
                         "Aktivitas Terkini",
                         style: TextStyle(
                           color: textColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
                           letterSpacing: -0.4,
                         ),
                         maxLines: 1,
@@ -374,7 +338,7 @@ class _DashboardViewState extends State<_DashboardView> {
                               "Lihat Semua",
                               style: TextStyle(
                                 color: Color(0xFF007AFF),
-                                fontSize: 13,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -399,66 +363,87 @@ class _DashboardViewState extends State<_DashboardView> {
             SliverToBoxAdapter(
               child: _recentTransactions.isEmpty
                   ? Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
                       decoration: BoxDecoration(
                         color: widget.isDark
-                            ? const Color(0xFF101626).withValues(alpha: 0.70)
-                            : Colors.white.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(24),
+                            ? const Color(0xFF1C1C1E).withValues(alpha: 0.85)
+                            : Colors.white.withValues(alpha: 0.82),
+                        borderRadius: BorderRadius.circular(22),
                         border: Border.all(
                           color: widget.isDark
-                              ? Colors.white.withValues(alpha: 0.09)
-                              : const Color(0xFF0F172A).withValues(alpha: 0.08),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            CupertinoIcons.tray_fill,
-                            size: 40,
-                            color: secondaryTextColor.withValues(alpha: 0.35),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            "Belum ada transaksi",
-                            style: TextStyle(
-                              color: secondaryTextColor,
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: widget.isDark
-                            ? const Color(0xFF101626).withValues(alpha: 0.75)
-                            : Colors.white.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: widget.isDark
-                              ? Colors.white.withValues(alpha: 0.10)
-                              : const Color(0xFF0F172A).withValues(alpha: 0.08),
-                          width: 1.0,
+                              ? Colors.white.withValues(alpha: 0.12)
+                              : Colors.white,
+                          width: 1.2,
                         ),
                         boxShadow: [
                           BoxShadow(
                             color: widget.isDark
-                                ? Colors.black.withValues(alpha: 0.35)
-                                : const Color(0xFF0F172A).withValues(alpha: 0.06),
+                                ? Colors.black.withValues(alpha: 0.45)
+                                : const Color(0xFF0F172A).withValues(alpha: 0.05),
                             blurRadius: 20,
-                            offset: const Offset(0, 6),
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(22),
                         child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                          child: Column(
+                            children: [
+                              Icon(
+                                CupertinoIcons.tray_fill,
+                                size: 40,
+                                color: secondaryTextColor.withValues(alpha: 0.35),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                "Belum ada transaksi",
+                                style: TextStyle(
+                                  color: secondaryTextColor,
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: widget.isDark
+                            ? const Color(0xFF1C1C1E).withValues(alpha: 0.85)
+                            : Colors.white.withValues(alpha: 0.82),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: widget.isDark
+                              ? Colors.white.withValues(alpha: 0.12)
+                              : Colors.white,
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: widget.isDark
+                                ? Colors.black.withValues(alpha: 0.45)
+                                : const Color(0xFF0F172A).withValues(alpha: 0.05),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                          if (!widget.isDark)
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              blurRadius: 1,
+                              offset: const Offset(0, 0.5),
+                            ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                           child: Column(
                             children: [
                               for (int i = 0; i < _recentTransactions.length; i++) ...[
@@ -469,13 +454,13 @@ class _DashboardViewState extends State<_DashboardView> {
                                 ),
                                 if (i < _recentTransactions.length - 1)
                                   Padding(
-                                    padding: const EdgeInsets.only(left: 68, right: 16),
+                                    padding: const EdgeInsets.only(left: 73, right: 16),
                                     child: Divider(
                                       height: 1,
-                                      thickness: 0.6,
+                                      thickness: 0.5,
                                       color: widget.isDark
                                           ? Colors.white.withValues(alpha: 0.08)
-                                          : const Color(0xFF0F172A).withValues(alpha: 0.08),
+                                          : const Color(0xFF3C3C43).withValues(alpha: 0.12),
                                     ),
                                   ),
                               ],
@@ -491,6 +476,9 @@ class _DashboardViewState extends State<_DashboardView> {
             ),
           ],
         ),
+      ),
+    ),
+  ),
 
         // ── DYNAMIC NOTCH / TOP STATUS VIGNETTE (PROGRESSIVE GRADASI BLUR & WARNA ALA APPLE IOS) ──
         // Mengalir lembut dari puncak layar: menggabungkan gradasi warna menipis ke bawah DENGAN
@@ -501,7 +489,7 @@ class _DashboardViewState extends State<_DashboardView> {
           top: 0,
           left: 0,
           right: 0,
-          height: (statusBarHeight > 0 ? statusBarHeight : 44) + 84,
+          height: statusBarHeight > 0 ? statusBarHeight : 44,
           child: LiquidGlassScrollEdge(
             edge: LiquidGlassEdge.top,
             style: LiquidGlassScrollEdgeStyle.soft, // Feathered progressive blur via GPU dstIn ramp
@@ -509,57 +497,8 @@ class _DashboardViewState extends State<_DashboardView> {
             blurCurve: Curves.easeInQuart, // Apple curve: menahan blur halus di area status bar
             curve: Curves.easeOutCubic, // Gradasi warna menipis sangat cepat & jernih
             color: widget.isDark
-                ? const Color(0xFF090C15).withValues(alpha: 0.38)
+                ? Colors.black.withValues(alpha: 0.50)
                 : Colors.white.withValues(alpha: 0.42),
-          ),
-        ),
-
-        // ── POJOK KIRI ATAS: FLOATING LIQUID PILL [ 💳 SakuAman ] ──
-        // Diposisikan sebelum backdrop barrier agar ikut ter-defokus halus saat popover terbuka
-        Positioned(
-          top: topIslandPadding,
-          left: 20,
-          width: 142,
-          height: 38,
-          child: Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (_) {
-              if (!_isInteractingTopBar) {
-                setState(() => _isInteractingTopBar = true);
-              }
-            },
-            onPointerUp: (_) {
-              if (_isInteractingTopBar) {
-                setState(() => _isInteractingTopBar = false);
-              }
-            },
-            onPointerCancel: (_) {
-              if (_isInteractingTopBar) {
-                setState(() => _isInteractingTopBar = false);
-              }
-            },
-            child: LiquidGlassLens(
-              style: pillGlassStyle,
-              touch: jellyTouch,
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SakuLogo(size: 20, isDark: widget.isDark),
-                    const SizedBox(width: 8),
-                    Text(
-                      "SakuAman",
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ),
         ),
 
@@ -602,7 +541,7 @@ class _DashboardViewState extends State<_DashboardView> {
                         // Menahan tubrukan teks di belakang, tapi tetap memancarkan refraksi warna cairan
                         color: widget.isDark
                             ? (_isNotifMenuOpen
-                                ? const Color(0xFF141927).withValues(alpha: 0.72)
+                                ? const Color(0xFF1C1C1E).withValues(alpha: 0.88)
                                 : Colors.white.withValues(alpha: 0.045))
                             : (_isNotifMenuOpen
                                 ? Colors.white.withValues(alpha: 0.75)
@@ -620,13 +559,15 @@ class _DashboardViewState extends State<_DashboardView> {
                         glow: LiquidGlassLight.glow(
                           thickness: _isNotifMenuOpen ? 8.0 : 5.0,
                           intensity: _isNotifMenuOpen
-                              ? (widget.isDark ? 0.25 : 0.18)
-                              : (widget.isDark ? 0.20 : 0.15),
-                          color: const Color(0xFF007AFF),
+                              ? (widget.isDark ? 0.08 : 0.18)
+                              : (widget.isDark ? 0.06 : 0.15),
+                          color: widget.isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : const Color(0xFF007AFF),
                         ),
                         shadow: LiquidGlassShadow(
                           blur: _isNotifMenuOpen ? 24 : 6,
-                          opacity: widget.isDark ? 0.35 : 0.14,
+                          opacity: widget.isDark ? 0.45 : 0.14,
                           color: widget.isDark ? Colors.black : const Color(0xFF0F172A),
                           offset: _isNotifMenuOpen
                               ? const Offset(0, 8)
@@ -699,15 +640,15 @@ class _DashboardViewState extends State<_DashboardView> {
                       color: const Color(0xFF34C759),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isDark ? const Color(0xFF0F1523) : Colors.white,
+                        color: isDark ? Colors.black : Colors.white,
                         width: 1.0,
                       ),
                     ),
                   ),
                 ),
               ],
-            ),
           ),
+        ),
         ),
       ),
     );
@@ -947,103 +888,653 @@ class _DashboardViewState extends State<_DashboardView> {
 );
   }
 
+  Widget _buildBentoGrid(Color textColor, Color secondaryTextColor) {
+    final topExpense = _topExpenseCategory;
+    final ratio = _savingsRatio;
+    final isSurplus = ratio >= 50;
+
+    final systemGreen = widget.isDark
+        ? const Color(0xFF30D158)
+        : const Color(0xFF34C759);
+    final systemOrange = widget.isDark
+        ? const Color(0xFFFF9F0A)
+        : const Color(0xFFFF9500);
+    final systemBlue = widget.isDark
+        ? const Color(0xFF0A84FF)
+        : const Color(0xFF007AFF);
+
+    final healthColor = isSurplus ? systemGreen : systemOrange;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── BENTO CARD KIRI (PROMINENT CASHFLOW HEALTH) ──
+          Expanded(
+            flex: 5,
+            child: GlassCard(
+              isDark: widget.isDark,
+              borderRadius: 22,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Jewel Squircle Badge Icon
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              healthColor.withValues(alpha: widget.isDark ? 0.24 : 0.16),
+                              healthColor.withValues(alpha: widget.isDark ? 0.12 : 0.06),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: healthColor.withValues(alpha: widget.isDark ? 0.32 : 0.22),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Icon(
+                          CupertinoIcons.arrow_up_right_circle_fill,
+                          color: healthColor,
+                          size: 16,
+                        ),
+                      ),
+                      // Surplus / Defisit Pill Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: healthColor.withValues(alpha: widget.isDark ? 0.16 : 0.10),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: healthColor.withValues(alpha: widget.isDark ? 0.26 : 0.18),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Text(
+                          isSurplus ? "Surplus" : "Defisit",
+                          style: TextStyle(
+                            color: healthColor,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "$ratio%",
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.8,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "Tabungan Terjaga",
+                    style: TextStyle(
+                      color: secondaryTextColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: ratio / 100.0,
+                      minHeight: 4.5,
+                      backgroundColor: widget.isDark
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : const Color(0xFF0F172A).withValues(alpha: 0.06),
+                      valueColor: AlwaysStoppedAnimation<Color>(healthColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 10),
+
+          // ── BENTO CARD KANAN (2 KARTU VERTIKAL MODULAR ALA APPLE) ──
+          Expanded(
+            flex: 5,
+            child: Column(
+              children: [
+                // Kartu Pengeluaran Terbanyak
+                GlassCard(
+                  isDark: widget.isDark,
+                  borderRadius: 20,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              systemOrange.withValues(alpha: widget.isDark ? 0.24 : 0.16),
+                              systemOrange.withValues(alpha: widget.isDark ? 0.12 : 0.06),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: systemOrange.withValues(alpha: widget.isDark ? 0.32 : 0.22),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Icon(
+                          CupertinoIcons.flame_fill,
+                          color: systemOrange,
+                          size: 15,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Pengeluaran Top",
+                              style: TextStyle(
+                                color: secondaryTextColor,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 1.5),
+                            Text(
+                              topExpense.value > 0 ? topExpense.key : "Belum ada",
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Kartu Status Auto-Notif E-Wallet / Bank
+                BouncyTouchWrapper(
+                  scaleFactor: 0.96,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    widget.onOpenAutoNotif?.call();
+                  },
+                  child: GlassCard(
+                    isDark: widget.isDark,
+                    borderRadius: 20,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                systemBlue.withValues(alpha: widget.isDark ? 0.24 : 0.16),
+                                systemBlue.withValues(alpha: widget.isDark ? 0.12 : 0.06),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: systemBlue.withValues(alpha: widget.isDark ? 0.32 : 0.22),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Icon(
+                            CupertinoIcons.device_phone_portrait,
+                            color: systemBlue,
+                            size: 15,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Auto-Catat Notif",
+                                style: TextStyle(
+                                  color: secondaryTextColor,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 1.5),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: systemGreen,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: systemGreen.withValues(alpha: 0.5),
+                                          blurRadius: 4,
+                                          spreadRadius: 0.5,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Expanded(
+                                    child: Text(
+                                      "Siap Deteksi",
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTransactionRow(
     TransactionModel tx, {
     required Color textColor,
     required Color secondaryTextColor,
   }) {
     final isIncome = tx.type == TransactionType.income;
+    final incomeColor = widget.isDark
+        ? const Color(0xFF30D158)
+        : const Color(0xFF34C759);
 
     return Dismissible(
       key: Key(tx.id),
       direction: DismissDirection.endToStart,
-      onDismissed: (_) => widget.onDeleteTransaction(tx.id),
+      onDismissed: (_) {
+        HapticFeedback.mediumImpact();
+        widget.onDeleteTransaction(tx.id);
+      },
       background: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
-        color: const Color(0xFFFF2A55),
+        padding: const EdgeInsets.only(right: 22),
+        color: const Color(0xFFFF3B30),
         child: const Icon(
           CupertinoIcons.trash_fill,
           color: Colors.white,
           size: 20,
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            // Category Icon (Pastel Soft Background)
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: tx.categoryColor.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: Icon(
-                tx.categoryIcon,
-                color: tx.categoryColor,
-                size: 19,
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            // Title & Subtitle Terintegrasi Bersih (Tanpa Kotak Badge Berlapis)
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    tx.title,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.2,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
+      child: BouncyTouchWrapper(
+        scaleFactor: 0.98,
+        onTap: widget.onNavigateToHistory,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              // Category Icon (Apple Wallet Neutral Frosted Squircle + Tinted Glyph)
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: widget.isDark
+                      ? Colors.white.withValues(alpha: 0.065)
+                      : const Color(0xFF0F172A).withValues(alpha: 0.045),
+                  borderRadius: BorderRadius.circular(13.5),
+                  border: Border.all(
+                    color: widget.isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.04),
+                    width: 0.8,
                   ),
-                  const SizedBox(height: 2.5),
-                  Text(
-                    "${tx.source} • ${tx.category} • ${tx.formattedDate}",
-                    style: TextStyle(
-                      color: secondaryTextColor,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                ],
+                ),
+                child: Icon(
+                  tx.categoryIcon,
+                  color: tx.categoryColor,
+                  size: 21,
+                ),
               ),
-            ),
+              const SizedBox(width: 13),
 
-            const SizedBox(width: 10),
+              // Title & Subtitle Ringkas (Tidak Kepotong ...)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      tx.title,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    const SizedBox(height: 2.5),
+                    Text(
+                      "${tx.category} • ${_formatRelTime(tx.date)}",
+                      style: TextStyle(
+                        color: secondaryTextColor,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
+              ),
 
-            // Amount
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 115),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: Text(
-                  tx.formattedAmount,
-                  style: TextStyle(
-                    color: isIncome
-                        ? const Color(0xFF00E676)
-                        : textColor,
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2,
+              const SizedBox(width: 10),
+
+              // Amount (Apple Wallet Tabular Figures)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 130),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    tx.formattedAmount,
+                    style: TextStyle(
+                      color: isIncome ? incomeColor : textColor,
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── SKELETON LOADER TIER 1 FINTECH (WARM-UP UNTUK HP KENTANG & PERFORMA HALUS) ──
+  Widget _buildDashboardSkeleton(BuildContext context, double topIslandPadding) {
+    final isDark = widget.isDark;
+
+    return _LiquidShimmer(
+      isDark: isDark,
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(height: topIslandPadding + 6),
+
+          // 1. Title Placeholder
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ShimmerBone(width: 190, height: 14, isDark: isDark),
+                const SizedBox(height: 6),
+                _ShimmerBone(width: 140, height: 34, isDark: isDark),
+              ],
             ),
-          ],
+          ),
+
+          // 2. Hero Balance Card Placeholder
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: _ShimmerBone(
+              width: double.infinity,
+              height: 236,
+              borderRadius: 28,
+              isDark: isDark,
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // 3. Bento Grid Placeholder
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: _ShimmerBone(
+                    width: double.infinity,
+                    height: 140,
+                    borderRadius: 24,
+                    isDark: isDark,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 5,
+                  child: Column(
+                    children: [
+                      _ShimmerBone(
+                        width: double.infinity,
+                        height: 65,
+                        borderRadius: 20,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: 10),
+                      _ShimmerBone(
+                        width: double.infinity,
+                        height: 65,
+                        borderRadius: 20,
+                        isDark: isDark,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // 4. Section Title Placeholder
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _ShimmerBone(width: 130, height: 18, isDark: isDark),
+                _ShimmerBone(width: 70, height: 14, isDark: isDark),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // 5. Inset Transaction List Skeleton
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : Colors.black.withValues(alpha: 0.03),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.03),
+              ),
+            ),
+            child: Column(
+              children: List.generate(3, (index) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      _ShimmerBone(
+                        width: 42,
+                        height: 42,
+                        borderRadius: 13,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _ShimmerBone(width: 120, height: 14, isDark: isDark),
+                            const SizedBox(height: 6),
+                            _ShimmerBone(width: 80, height: 10, isDark: isDark),
+                          ],
+                        ),
+                      ),
+                      _ShimmerBone(width: 70, height: 16, isDark: isDark),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
+          const SizedBox(height: 160),
+        ],
+      ),
+    ),
+  );
+  }
+}
+
+/// Shimmer Shader Mask Ringan (Zero CPU Overhead, Cocok untuk HP Low-End)
+class _LiquidShimmer extends StatefulWidget {
+  final Widget child;
+  final bool isDark;
+
+  const _LiquidShimmer({required this.child, required this.isDark});
+
+  @override
+  State<_LiquidShimmer> createState() => _LiquidShimmerState();
+}
+
+class _LiquidShimmerState extends State<_LiquidShimmer>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _shimmerController;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _shimmerController,
+      builder: (context, child) {
+        return ShaderMask(
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: const Alignment(-1.5, -0.3),
+              end: const Alignment(1.5, 0.3),
+              stops: [
+                (_shimmerController.value - 0.3).clamp(0.0, 1.0),
+                _shimmerController.value,
+                (_shimmerController.value + 0.3).clamp(0.0, 1.0),
+              ],
+              colors: [
+                Colors.white.withValues(alpha: 0.0),
+                Colors.white.withValues(alpha: widget.isDark ? 0.22 : 0.40),
+                Colors.white.withValues(alpha: 0.0),
+              ],
+            ).createShader(bounds);
+          },
+          child: widget.child,
+        );
+      },
+    );
+  }
+}
+
+/// Placeholder Bone Komponen
+class _ShimmerBone extends StatelessWidget {
+  final double width;
+  final double height;
+  final double borderRadius;
+  final bool isDark;
+
+  const _ShimmerBone({
+    required this.width,
+    required this.height,
+    this.borderRadius = 12,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.04),
+          width: 0.8,
         ),
       ),
     );
   }
 }
+
+
+

@@ -1,7 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../models/transaction.dart';
 import 'glass_card.dart';
+import 'bouncy_touch_wrapper.dart';
+import 'receipt_scanner_sheet.dart';
 
 class AddTransactionSheet extends StatefulWidget {
   final Function(TransactionModel) onAdd;
@@ -70,6 +74,36 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     _amountController.dispose();
     _titleController.dispose();
     super.dispose();
+  }
+
+  void _openReceiptScanner() {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => ReceiptScannerSheet(
+        isDark: widget.isDark,
+        onReceiptScanned: (result) {
+          setState(() {
+            _selectedType = TransactionType.expense;
+            _amountController.text = NumberFormat.currency(
+              locale: 'id_ID',
+              symbol: 'Rp ',
+              decimalDigits: 0,
+            ).format(result.amount);
+            _titleController.text = result.merchant;
+            if (_expenseCategories.contains(result.category)) {
+              _selectedCategory = result.category;
+            }
+            if (_sources.contains(result.source)) {
+              _selectedSource = result.source;
+            }
+          });
+          HapticFeedback.mediumImpact();
+        },
+      ),
+    );
   }
 
   void _submit() {
@@ -174,7 +208,103 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
+
+              // ── BANNER SCAN STRUK KASIR / SHOPEE ──
+              BouncyTouchWrapper(
+                onTap: _openReceiptScanner,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: widget.isDark
+                          ? [
+                              const Color(0xFF007AFF).withValues(alpha: 0.20),
+                              const Color(0xFF5856D6).withValues(alpha: 0.15),
+                            ]
+                          : [
+                              const Color(0xFF007AFF).withValues(alpha: 0.12),
+                              const Color(0xFF5856D6).withValues(alpha: 0.08),
+                            ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFF007AFF).withValues(alpha: 0.40),
+                      width: 1.0,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF007AFF).withValues(alpha: 0.25),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.camera_viewfinder,
+                          color: Color(0xFF007AFF),
+                          size: 17,
+                        ),
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  "Scan Foto Struk / Nota Kasir",
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF34C759)
+                                        .withValues(alpha: 0.20),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    "OCR",
+                                    style: TextStyle(
+                                      color: Color(0xFF34C759),
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 1.5),
+                            Text(
+                              "Auto-catat Alfamart, Indomaret, Shopee, SPBU",
+                              style: TextStyle(
+                                color: secondaryTextColor,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        CupertinoIcons.chevron_right,
+                        color: secondaryTextColor,
+                        size: 14,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
 
               // Segmented Switch
               Container(

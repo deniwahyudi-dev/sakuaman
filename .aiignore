@@ -1,0 +1,9 @@
+.dart_tool/
+.idea/
+.gradle/
+build/
+android/app/build/
+ios/Pods/
+windows/flutter/ephemeral/
+**/*.g.dart
+**/*.freezed.dart

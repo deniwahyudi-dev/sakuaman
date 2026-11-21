@@ -60,7 +60,7 @@ class _AmbientMeshBackgroundState extends State<AmbientMeshBackground>
   @override
   Widget build(BuildContext context) {
     final bgColor = widget.isDark
-        ? const Color(0xFF090C15)
+        ? const Color(0xFF000000)
         : const Color(0xFFF6F8FC);
 
     return Scaffold(
@@ -78,63 +78,28 @@ class _AmbientMeshBackgroundState extends State<AmbientMeshBackground>
               final t = _meshController.value;
 
               if (widget.isDark) {
-                // Dark Mode: Serene Midnight Sapphire & Ice Slate (Calm, Deep & Anti-Rame)
-                return Stack(
-                  children: [
-                    // Top Right: Deep Sapphire Blue Pool
-                    Positioned(
-                      top: -40 + (t * 25),
-                      right: -50 + (t * 15),
-                      child: Container(
-                        width: 280,
-                        height: 280,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFF0D6EFD).withValues(alpha: 0.12),
-                        ),
-                      ),
-                    ),
-                    // Middle Left: Deep Slate Abyssal Pool
-                    Positioned(
-                      top: 220 - (t * 20),
-                      left: -70 - (t * 10),
-                      child: Container(
-                        width: 290,
-                        height: 290,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
-                        ),
-                      ),
-                    ),
-                    // Bottom Right: Gentle Ambient Azure Pool
-                    Positioned(
-                      bottom: 80 + (t * 15),
-                      right: -60 - (t * 20),
-                      child: Container(
-                        width: 260,
-                        height: 260,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFF007AFF).withValues(alpha: 0.07),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
+                // Apple Pure OLED Black: Solid pitch black (#000000) canvas for true iOS depth & infinite contrast
+                return const SizedBox.shrink();
               } else {
-                // Light Mode: Soft Studio Glow Orbs (Soft Azure & Light Rose)
+                // Light Mode: Soft Studio Glow Orbs (Native GPU Radial Gradient Glow)
                 return Stack(
                   children: [
                     Positioned(
                       top: -60 + (t * 20),
                       right: -40 + (t * 10),
                       child: Container(
-                        width: 300,
-                        height: 300,
+                        width: 340,
+                        height: 340,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF007AFF).withValues(alpha: 0.10),
+                          gradient: RadialGradient(
+                            colors: [
+                              const Color(0xFF007AFF).withValues(alpha: 0.15),
+                              const Color(0xFF007AFF).withValues(alpha: 0.05),
+                              const Color(0xFF007AFF).withValues(alpha: 0.0),
+                            ],
+                            stops: const [0.0, 0.55, 1.0],
+                          ),
                         ),
                       ),
                     ),
@@ -142,11 +107,18 @@ class _AmbientMeshBackgroundState extends State<AmbientMeshBackground>
                       top: 240 - (t * 15),
                       left: -60 + (t * 15),
                       child: Container(
-                        width: 270,
-                        height: 270,
+                        width: 310,
+                        height: 310,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF5856D6).withValues(alpha: 0.08),
+                          gradient: RadialGradient(
+                            colors: [
+                              const Color(0xFF5856D6).withValues(alpha: 0.12),
+                              const Color(0xFF5856D6).withValues(alpha: 0.04),
+                              const Color(0xFF5856D6).withValues(alpha: 0.0),
+                            ],
+                            stops: const [0.0, 0.55, 1.0],
+                          ),
                         ),
                       ),
                     ),
@@ -154,11 +126,18 @@ class _AmbientMeshBackgroundState extends State<AmbientMeshBackground>
                       bottom: 100 + (t * 10),
                       right: -30,
                       child: Container(
-                        width: 250,
-                        height: 250,
+                        width: 290,
+                        height: 290,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF00C4FF).withValues(alpha: 0.08),
+                          gradient: RadialGradient(
+                            colors: [
+                              const Color(0xFF00C4FF).withValues(alpha: 0.12),
+                              const Color(0xFF00C4FF).withValues(alpha: 0.04),
+                              const Color(0xFF00C4FF).withValues(alpha: 0.0),
+                            ],
+                            stops: const [0.0, 0.55, 1.0],
+                          ),
                         ),
                       ),
                     ),
@@ -166,14 +145,6 @@ class _AmbientMeshBackgroundState extends State<AmbientMeshBackground>
                 );
               }
             },
-          ),
-
-          // Soft Global Defocus Blur Layer to smoothly blend the Mesh Orbs
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
-              child: const SizedBox.expand(),
-            ),
           ),
 
           // Main Screen Foreground Content

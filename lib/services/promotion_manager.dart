@@ -15,8 +15,8 @@ class ProMotionManager {
   /// Switch apakah Smart ProMotion 1 FPS Idle aktif
   final ValueNotifier<bool> isEngineEnabled = ValueNotifier<bool>(true);
 
-  /// Switch apakah Kapsul Penanda FPS ditampilkan di layar
-  final ValueNotifier<bool> showFpsBadge = ValueNotifier<bool>(true);
+  /// Switch apakah Kapsul Penanda FPS ditampilkan di layar (Default: false / murni silent di backend)
+  final ValueNotifier<bool> showFpsBadge = ValueNotifier<bool>(false);
 
   /// Angka FPS yang ditampilkan (1, 60, 120, 144)
   final ValueNotifier<int> currentFps = ValueNotifier<int>(144);

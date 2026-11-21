@@ -29,7 +29,7 @@ class LiquidTopBar extends StatelessWidget {
         cornerRadius: 22,
       ),
       color: isDark
-          ? const Color(0xFF101626).withValues(alpha: 0.70)
+          ? const Color(0xFF1C1C1E).withValues(alpha: 0.82)
           : Colors.white.withValues(alpha: 0.80),
       blur: 16.0,
       refractionIndex: 1.12,
@@ -40,7 +40,7 @@ class LiquidTopBar extends StatelessWidget {
       ),
       shadow: LiquidGlassShadow(
         blur: 16,
-        opacity: isDark ? 0.35 : 0.08,
+        opacity: isDark ? 0.45 : 0.08,
         color: isDark ? Colors.black : const Color(0xFF0F172A),
       ),
     );

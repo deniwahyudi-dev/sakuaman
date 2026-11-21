@@ -1,11 +1,20 @@
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 import '../models/transaction.dart';
 import '../services/ai_advisor.dart';
 import '../widgets/bouncy_touch_wrapper.dart';
 
+/// Screen Analisa AI Minimalist & Luxe
+/// Desain Apple Intelligence (iOS 18 / VisionOS):
+/// - Apple Large Title murni tanpa floating pill redundan.
+/// - Apple Intelligence Fluid Hero Pod dengan iridescent chromatic glow.
+/// - Tombol pemicu magnetik kenyal (fluid tactile recoil) saat ditekan.
+/// - Alokasi 50/30/20 minimalis dalam wadah kaca terpadu.
+/// - Siri Suggestion Tiles: rekomendasi terstruktur, bukan wall-of-text kaku.
 class AIInsightsScreen extends StatefulWidget {
   final List<TransactionModel> transactions;
   final bool isDark;
@@ -20,8 +29,49 @@ class AIInsightsScreen extends StatefulWidget {
   State<AIInsightsScreen> createState() => _AIInsightsScreenState();
 }
 
-class _AIInsightsScreenState extends State<AIInsightsScreen> {
-  bool _isInteractingTopBar = false;
+class _AIInsightsScreenState extends State<AIInsightsScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _scanController;
+  bool _isScanning = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scanController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scanController.dispose();
+    super.dispose();
+  }
+
+  void _triggerScan() async {
+    if (_isScanning) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _isScanning = true);
+    _scanController.forward(from: 0.0);
+
+    // Haptic rhythm sequence during scanning
+    await Future.delayed(const Duration(milliseconds: 350));
+    if (mounted && _isScanning) HapticFeedback.selectionClick();
+
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (mounted && _isScanning) HapticFeedback.selectionClick();
+
+    await Future.delayed(const Duration(milliseconds: 450));
+    if (!mounted) return;
+
+    // Final lock-in haptic
+    HapticFeedback.heavyImpact();
+    Future.delayed(const Duration(milliseconds: 90), () {
+      if (mounted) HapticFeedback.lightImpact();
+    });
+    setState(() => _isScanning = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,404 +80,609 @@ class _AIInsightsScreenState extends State<AIInsightsScreen> {
 
     final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final secondaryTextColor = isDark
-        ? const Color(0xFF94A3B8)
+        ? const Color(0xFF8E8E93)
         : const Color(0xFF64748B);
-
-    // Formula Kaca Kristal Cair Murni (Ultra-Clear Liquid Glass, Low Opacity & Crisp Blur)
-    final pillGlassStyle = LiquidGlassStyle(
-      shape: const LiquidGlassShape.continuousRoundedRectangle(
-        cornerRadius: 18,
-      ),
-      color: widget.isDark
-          ? Colors.white.withValues(alpha: 0.045)
-          : Colors.white.withValues(alpha: 0.12),
-      blur: 3.5,
-      refractionIndex: 1.24,
-      refractionWidth: 12.0,
-      magnification: 1.05,
-      dispersion: 1.8,
-      specular: LiquidGlassLight.specular(
-        thickness: 3.2,
-        intensity: widget.isDark ? 1.20 : 1.30,
-      ),
-      glow: LiquidGlassLight.glow(
-        thickness: 5.0,
-        intensity: widget.isDark ? 0.20 : 0.15,
-        color: const Color(0xFF34C759),
-      ),
-      shadow: LiquidGlassShadow(
-        blur: 6,
-        opacity: widget.isDark ? 0.08 : 0.05,
-        color: Colors.black,
-        offset: const Offset(0, 2),
-      ),
-    );
-
-    // Dynamic jelly-elastic touch physics (refraction boost + spring bounce)
-    const jellyTouch = LiquidGlassTouch(
-      flex: LiquidGlassFlex(
-        stretch: 11,
-        squeeze: 0.40,
-        lean: 0.28,
-        grip: 0.60,
-        compressInward: true,
-        holdScale: 0.02,
-        tapScale: 0.018,
-        maxPull: 26,
-        advanced: LiquidGlassFlexAdvanced(
-          childFollow: 0.45,
-          refractionBoost: 0.12,
-          stiffness: 320,
-          damping: 22,
-          releaseDamping: 18,
-        ),
-      ),
-    );
 
     final double statusBarHeight = MediaQuery.paddingOf(context).top;
     final double topIslandPadding = statusBarHeight > 0 ? statusBarHeight + 6 : 8.0;
+
+    final systemGreen = isDark ? const Color(0xFF30D158) : const Color(0xFF34C759);
+    final systemOrange = isDark ? const Color(0xFFFF9F0A) : const Color(0xFFFF9500);
+    final gradeColor = health.score >= 70 ? systemGreen : systemOrange;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // ── KONTEN SCROLLABLE DI BAWAH KACA (FLOWS UNDERNEATH PINNED TOP BAR) ──
+          // ── KONTEN SCROLLABLE ──
           CustomScrollView(
-            physics: _isInteractingTopBar
-                ? const NeverScrollableScrollPhysics()
-                : const BouncingScrollPhysics(),
+            physics: const BouncingScrollPhysics(),
             slivers: [
-              // Spacer agar konten awal mulai di bawah floating islands
+              // Spacer top clearance
               SliverToBoxAdapter(
-                child: SizedBox(height: topIslandPadding + 44),
+                child: SizedBox(height: topIslandPadding + 10),
               ),
 
-              // ── LARGE TITLE "Kecerdasan AI" & Subtitle Lega ──
+              // ── 1. APPLE LARGE TITLE HEADER ──
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Kecerdasan AI",
+                        "Analisa Finansial",
                         style: TextStyle(
                           color: textColor,
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.8,
+                          fontSize: 34,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -1.0,
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        "Financial Health & Local Advisor",
-                        style: TextStyle(
-                          color: secondaryTextColor,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          // Apple Intelligence Chromatic Glowing Dot
+                          Container(
+                            width: 7.5,
+                            height: 7.5,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: SweepGradient(
+                                colors: [
+                                  Color(0xFF5AC8FA),
+                                  Color(0xFFAF52DE),
+                                  Color(0xFFFF2D55),
+                                  Color(0xFFFF9500),
+                                  Color(0xFF5AC8FA),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 7),
+                          Text(
+                            "Apple Intelligence • On-Device Engine",
+                            style: TextStyle(
+                              color: secondaryTextColor,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w400,
+                              letterSpacing: -0.1,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ),
 
-              // ── HERO GLASS CARD (KESEHATAN FINANSIAL & ALOKASI BERSATU RAPI) ──
+              const SliverToBoxAdapter(child: SizedBox(height: 6)),
+
+              // ── 2. HERO APPLE INTELLIGENCE FLUID POD ──
               SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF101626).withValues(alpha: 0.75)
-                        : Colors.white.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.10)
-                          : const Color(0xFF0F172A).withValues(alpha: 0.08),
-                      width: 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDark
-                            ? Colors.black.withValues(alpha: 0.35)
-                            : const Color(0xFF0F172A).withValues(alpha: 0.06),
-                        blurRadius: 20,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header: Status & Score Badge
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "KONDISI FINANSIAL",
-                                        style: TextStyle(
-                                          color: secondaryTextColor,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.8,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        health.grade,
-                                        style: TextStyle(
-                                          color: textColor,
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: -0.4,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: (health.score >= 70
-                                            ? const Color(0xFF34C759)
-                                            : const Color(0xFFFF9500))
-                                        .withValues(alpha: 0.14),
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: (health.score >= 70
-                                              ? const Color(0xFF34C759)
-                                              : const Color(0xFFFF9500))
-                                          .withValues(alpha: 0.30),
-                                      width: 0.8,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    "${health.score} / 100",
-                                    style: TextStyle(
-                                      color: health.score >= 70
-                                          ? const Color(0xFF34C759)
-                                          : const Color(0xFFFF9500),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                child: AnimatedBuilder(
+                  animation: _scanController,
+                  builder: (context, _) {
+                    final t = _scanController.value;
+                    final pulseGlow = _isScanning ? math.sin(t * math.pi) : 0.0;
+                    final cardScale = _isScanning ? (1.0 - math.sin(t * math.pi) * 0.02) : 1.0;
 
-                            const SizedBox(height: 12),
+                    // Dynamic score counter rolling during scan
+                    final int displayScore;
+                    if (_isScanning) {
+                      final progress = Curves.easeOutCubic.transform(t);
+                      final startScore = (health.score > 30 ? health.score - 25 : 55).clamp(10, 95);
+                      final jitter = (math.sin(t * 22) * 3).round();
+                      displayScore = ((startScore + (health.score - startScore) * progress) + jitter).round().clamp(0, 100);
+                    } else {
+                      displayScore = health.score;
+                    }
+                    final String displayGrade = _isScanning ? "MENGKALKULASI..." : health.grade.toUpperCase();
 
-                            // Summary Text
-                            Text(
-                              health.summary,
-                              style: TextStyle(
-                                color: secondaryTextColor,
-                                fontSize: 13,
-                                height: 1.4,
+                    return Transform.scale(
+                      scale: cardScale,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(26),
+                          // Apple Intelligence Chromatic Glow & Ambient Shadow
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFAF52DE).withValues(
+                                alpha: isDark
+                                    ? (0.10 + pulseGlow * 0.35)
+                                    : (0.08 + pulseGlow * 0.25),
                               ),
+                              blurRadius: 24 + (pulseGlow * 18),
+                              spreadRadius: pulseGlow * 1.5,
+                              offset: const Offset(0, 8),
                             ),
-
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              child: Divider(
-                                height: 1,
-                                thickness: 0.6,
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.08)
-                                    : const Color(0xFF0F172A).withValues(alpha: 0.08),
+                            if (_isScanning)
+                              BoxShadow(
+                                color: const Color(0xFF5AC8FA).withValues(
+                                  alpha: isDark ? (pulseGlow * 0.22) : (pulseGlow * 0.16),
+                                ),
+                                blurRadius: 20 + (pulseGlow * 14),
+                                offset: const Offset(0, -3),
                               ),
-                            ),
-
-                            // Alokasi 50 / 30 / 20 Minimalis
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  "Alokasi Kas (Aturan 50 / 30 / 20)",
-                                  style: TextStyle(
-                                    color: textColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                Text(
-                                  "Ideal",
-                                  style: TextStyle(
-                                    color: secondaryTextColor,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            // Segmented Progress Bar (Sleek 8px)
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(5),
-                              child: SizedBox(
-                                height: 8,
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      flex: (health.needsPercentage.clamp(1, 100)).toInt(),
-                                      child: Container(color: const Color(0xFF007AFF)),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Expanded(
-                                      flex: (health.wantsPercentage.clamp(1, 100)).toInt(),
-                                      child: Container(color: const Color(0xFFFF9500)),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Expanded(
-                                      flex: (health.savingsRate.clamp(1, 100)).toInt(),
-                                      child: Container(color: const Color(0xFF34C759)),
-                                    ),
-                                  ],
-                                ),
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: isDark ? 0.45 : 0.06,
                               ),
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            // Legend Alokasi
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildLegendItem(
-                                  label: "Kebutuhan",
-                                  percentage: "${health.needsPercentage.toStringAsFixed(0)}%",
-                                  color: const Color(0xFF007AFF),
-                                  isDark: isDark,
-                                ),
-                                _buildLegendItem(
-                                  label: "Keinginan",
-                                  percentage: "${health.wantsPercentage.toStringAsFixed(0)}%",
-                                  color: const Color(0xFFFF9500),
-                                  isDark: isDark,
-                                ),
-                                _buildLegendItem(
-                                  label: "Tabungan",
-                                  percentage: "${health.savingsRate.toStringAsFixed(0)}%",
-                                  color: const Color(0xFF34C759),
-                                  isDark: isDark,
-                                ),
-                              ],
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
                             ),
                           ],
+                          gradient: _isScanning
+                              ? SweepGradient(
+                                  colors: const [
+                                    Color(0xFF5AC8FA),
+                                    Color(0xFFAF52DE),
+                                    Color(0xFFFF2D55),
+                                    Color(0xFFFF9500),
+                                    Color(0xFF34C759),
+                                    Color(0xFF5AC8FA),
+                                  ],
+                                  transform: GradientRotation(t * 2 * math.pi),
+                                )
+                              : null,
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 14)),
-
-              // ── SECTION TITLE: TEMUAN & SARAN CERDAS AI ──
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    "Temuan & Saran Cerdas AI",
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.4,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 10)),
-
-              // ── GROUPED INSET GLASS CONTAINER (SEMUA SARAN AI DALAM SATU WADAH KACA) ──
-              SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF101626).withValues(alpha: 0.75)
-                        : Colors.white.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.10)
-                          : const Color(0xFF0F172A).withValues(alpha: 0.08),
-                      width: 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDark
-                            ? Colors.black.withValues(alpha: 0.35)
-                            : const Color(0xFF0F172A).withValues(alpha: 0.06),
-                        blurRadius: 20,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                      child: Column(
-                        children: [
-                          for (int i = 0; i < health.insights.length; i++) ...[
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        padding: _isScanning ? const EdgeInsets.all(1.8) : EdgeInsets.zero,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(_isScanning ? 24.2 : 26),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF1C1C1E).withValues(alpha: 0.90)
+                                    : Colors.white.withValues(alpha: 0.90),
+                                borderRadius: BorderRadius.circular(_isScanning ? 24.2 : 26),
+                                border: _isScanning
+                                    ? null
+                                    : Border.all(
+                                        color: isDark
+                                            ? Colors.white.withValues(alpha: 0.16)
+                                            : Colors.white.withValues(alpha: 0.80),
+                                        width: 1.2,
+                                      ),
+                              ),
+                              child: Stack(
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(7),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF007AFF).withValues(alpha: 0.14),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      CupertinoIcons.sparkles,
-                                      color: Color(0xFF007AFF),
-                                      size: 15,
+                                  // Top Specular Glare
+                                  Positioned(
+                                    top: 0,
+                                    left: 20,
+                                    right: 20,
+                                    height: 1.5,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.transparent,
+                                            Colors.white.withValues(alpha: 0.35),
+                                            Colors.white.withValues(alpha: 0.80),
+                                            Colors.white.withValues(alpha: 0.35),
+                                            Colors.transparent,
+                                          ],
+                                          stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      health.insights[i],
-                                      style: TextStyle(
-                                        color: textColor,
-                                        fontSize: 13.5,
-                                        height: 1.4,
-                                        fontWeight: FontWeight.w500,
+
+                                  // Diagonal Shimmer Scan Wave
+                                  if (_isScanning)
+                                    Positioned.fill(
+                                      child: IgnorePointer(
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment(-2.5 + t * 5.0, -1.0),
+                                              end: Alignment(-1.0 + t * 5.0, 1.0),
+                                              colors: [
+                                                Colors.transparent,
+                                                (isDark ? const Color(0xFFAF52DE) : Colors.white)
+                                                    .withValues(alpha: isDark ? 0.15 : 0.35),
+                                                Colors.white.withValues(alpha: isDark ? 0.28 : 0.55),
+                                                (isDark ? const Color(0xFF5AC8FA) : Colors.white)
+                                                    .withValues(alpha: isDark ? 0.15 : 0.35),
+                                                Colors.transparent,
+                                              ],
+                                              stops: const [0.0, 0.35, 0.50, 0.65, 1.0],
+                                            ),
+                                          ),
+                                        ),
                                       ),
+                                    ),
+
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        // Header Pod: Sparkles & Status Kesiapan
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(5),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFAF52DE).withValues(
+                                                      alpha: isDark ? 0.20 : 0.12,
+                                                    ),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(
+                                                    CupertinoIcons.sparkles,
+                                                    color: Color(0xFFAF52DE),
+                                                    size: 14,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  "KESEHATAN ARUS KAS",
+                                                  style: TextStyle(
+                                                    color: secondaryTextColor,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    letterSpacing: 0.8,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 9,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: gradeColor.withValues(
+                                                  alpha: isDark ? 0.18 : 0.10,
+                                                ),
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(
+                                                  color: gradeColor.withValues(
+                                                    alpha: isDark ? 0.30 : 0.22,
+                                                  ),
+                                                  width: 0.8,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                "$displayScore / 100",
+                                                style: TextStyle(
+                                                  color: gradeColor,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                  fontFeatures: const [
+                                                    FontFeature.tabularFigures()
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+
+                                        const SizedBox(height: 16),
+
+                                        // Big Bold 52pt Score Centerpiece
+                                        Text(
+                                          "$displayScore",
+                                          style: TextStyle(
+                                            color: textColor,
+                                            fontSize: 52,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: -2.0,
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures()
+                                            ],
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 2),
+
+                                        Text(
+                                          displayGrade,
+                                          style: TextStyle(
+                                            color: gradeColor,
+                                            fontSize: 14.5,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.4,
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 8),
+
+                                        // Brief Contextual AI Summary
+                                        Text(
+                                          health.summary,
+                                          style: TextStyle(
+                                            color: secondaryTextColor,
+                                            fontSize: 13,
+                                            height: 1.4,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+
+                                        const SizedBox(height: 18),
+
+                                        // ── TRIGGER BUTTON ──
+                                        BouncyTouchWrapper(
+                                          scaleFactor: 0.94,
+                                          onTap: _triggerScan,
+                                          child: AnimatedContainer(
+                                            duration: const Duration(milliseconds: 240),
+                                            curve: Curves.easeOutCubic,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 18,
+                                              vertical: 10,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isDark
+                                                  ? Colors.white.withValues(
+                                                      alpha: _isScanning ? 0.18 : 0.08,
+                                                    )
+                                                  : const Color(0xFF0F172A).withValues(
+                                                      alpha: _isScanning ? 0.10 : 0.05,
+                                                    ),
+                                              borderRadius: BorderRadius.circular(16),
+                                              border: Border.all(
+                                                color: _isScanning
+                                                    ? const Color(0xFFAF52DE).withValues(alpha: 0.45)
+                                                    : (isDark
+                                                        ? Colors.white.withValues(alpha: 0.12)
+                                                        : const Color(0xFF0F172A).withValues(alpha: 0.08)),
+                                                width: 1.0,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Transform.rotate(
+                                                  angle: _isScanning ? (t * 4 * math.pi) : 0,
+                                                  child: const Icon(
+                                                    CupertinoIcons.sparkles,
+                                                    color: Color(0xFFAF52DE),
+                                                    size: 15,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  _isScanning
+                                                      ? "Menghitung Alur Kas..."
+                                                      : "Pindai Ulang dengan AI",
+                                                  style: TextStyle(
+                                                    color: textColor,
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w600,
+                                                    letterSpacing: -0.2,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // ── 3. SECTION: ALOKASI KAS (ATURAN 50 / 30 / 20) ──
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 7),
+                  child: Text(
+                    "ALOKASI KAS (ATURAN 50 / 30 / 20)",
+                    style: TextStyle(
+                      color: secondaryTextColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1C1C1E).withValues(alpha: 0.85)
+                        : Colors.white.withValues(alpha: 0.82),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.12)
+                          : Colors.white,
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withValues(alpha: 0.45)
+                            : const Color(0xFF0F172A).withValues(alpha: 0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                      if (!isDark)
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          blurRadius: 1,
+                          offset: const Offset(0, 0.5),
+                        ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Sleek Apple Segmented Capsule Bar (9px height)
+                          SizedBox(
+                            height: 9,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: (health.needsPercentage.clamp(1, 100)).toInt(),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF007AFF),
+                                      borderRadius: BorderRadius.circular(4.5),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 3.5),
+                                Expanded(
+                                  flex: (health.wantsPercentage.clamp(1, 100)).toInt(),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFF9500),
+                                      borderRadius: BorderRadius.circular(4.5),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 3.5),
+                                Expanded(
+                                  flex: (health.savingsRate.clamp(1, 100)).toInt(),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF34C759),
+                                      borderRadius: BorderRadius.circular(4.5),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // 3 Pods Legend (Expanded Symmetrical Alignment)
+                          Row(
+                            children: [
+                              _buildLegendItem(
+                                label: "Kebutuhan",
+                                percentage: "${health.needsPercentage.toStringAsFixed(0)}%",
+                                target: "Maks 50%",
+                                color: const Color(0xFF007AFF),
+                                textColor: textColor,
+                                secondaryTextColor: secondaryTextColor,
+                                alignment: CrossAxisAlignment.start,
+                              ),
+                              _buildLegendItem(
+                                label: "Keinginan",
+                                percentage: "${health.wantsPercentage.toStringAsFixed(0)}%",
+                                target: "Maks 30%",
+                                color: const Color(0xFFFF9500),
+                                textColor: textColor,
+                                secondaryTextColor: secondaryTextColor,
+                                alignment: CrossAxisAlignment.center,
+                              ),
+                              _buildLegendItem(
+                                label: "Tabungan",
+                                percentage: "${health.savingsRate.toStringAsFixed(0)}%",
+                                target: "Min 20%",
+                                color: const Color(0xFF34C759),
+                                textColor: textColor,
+                                secondaryTextColor: secondaryTextColor,
+                                alignment: CrossAxisAlignment.end,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── 4. SECTION: REKOMENDASI CERDAS AI (SIRI SUGGESTIONS) ──
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 7),
+                  child: Text(
+                    "REKOMENDASI CERDAS AI",
+                    style: TextStyle(
+                      color: secondaryTextColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1C1C1E).withValues(alpha: 0.85)
+                        : Colors.white.withValues(alpha: 0.82),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.12)
+                          : Colors.white,
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withValues(alpha: 0.45)
+                            : const Color(0xFF0F172A).withValues(alpha: 0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                      if (!isDark)
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          blurRadius: 1,
+                          offset: const Offset(0, 0.5),
+                        ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: Column(
+                        children: [
+                          for (int i = 0; i < health.insights.length; i++) ...[
+                            _buildInsightTile(
+                              rawInsight: health.insights[i],
+                              textColor: textColor,
+                              secondaryTextColor: secondaryTextColor,
+                              isDark: isDark,
+                            ),
                             if (i < health.insights.length - 1)
                               Padding(
-                                padding: const EdgeInsets.only(left: 56, right: 16),
+                                padding: const EdgeInsets.only(left: 69, right: 16),
                                 child: Divider(
                                   height: 1,
-                                  thickness: 0.6,
+                                  thickness: 0.5,
                                   color: isDark
                                       ? Colors.white.withValues(alpha: 0.08)
-                                      : const Color(0xFF0F172A).withValues(alpha: 0.08),
+                                      : const Color(0xFF3C3C43).withValues(alpha: 0.12),
                                 ),
                               ),
                           ],
@@ -438,10 +693,10 @@ class _AIInsightsScreenState extends State<AIInsightsScreen> {
                 ),
               ),
 
-              // ── FOOTER PRIVASI MINIMALIS (TENANG & TIDAK MAKAN TEMPAT) ──
+              // ── FOOTER PRIVASI MUTLAK ON-DEVICE ──
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 10),
                   child: Center(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -469,190 +724,213 @@ class _AIInsightsScreenState extends State<AIInsightsScreen> {
                 ),
               ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 170)),
+              // Bottom Clearance Spacer
+              const SliverToBoxAdapter(child: SizedBox(height: 130)),
             ],
           ),
 
-        // ── DYNAMIC NOTCH / TOP STATUS VIGNETTE (PROGRESSIVE GRADASI BLUR & WARNA ALA APPLE IOS) ──
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: (statusBarHeight > 0 ? statusBarHeight : 44) + 84,
-          child: LiquidGlassScrollEdge(
-            edge: LiquidGlassEdge.top,
-            style: LiquidGlassScrollEdgeStyle.soft,
-            blur: 11,
-            blurCurve: Curves.easeInQuart,
-            curve: Curves.easeOutCubic,
-            color: widget.isDark
-                ? const Color(0xFF090C15).withValues(alpha: 0.38)
-                : Colors.white.withValues(alpha: 0.42),
+          // ── STATUS BAR FEATHERED BLUR (HANYA AREA STATUS BAR SISTEM) ──
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight > 0 ? statusBarHeight : 44,
+            child: LiquidGlassScrollEdge(
+              edge: LiquidGlassEdge.top,
+              style: LiquidGlassScrollEdgeStyle.soft,
+              blur: 11,
+              blurCurve: Curves.easeInQuart,
+              curve: Curves.easeOutCubic,
+              color: widget.isDark
+                  ? Colors.black.withValues(alpha: 0.50)
+                  : Colors.white.withValues(alpha: 0.42),
+            ),
           ),
-        ),
+        ],
+      ),
+    );
+  }
 
-        // ── PINNED FLOATING LIQUID ISLANDS (ALA QURANIFY IOS 26) ──
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (_) {
-              if (!_isInteractingTopBar) {
-                setState(() => _isInteractingTopBar = true);
-              }
-            },
-            onPointerUp: (_) {
-              if (_isInteractingTopBar) {
-                setState(() => _isInteractingTopBar = false);
-              }
-            },
-            onPointerCancel: (_) {
-              if (_isInteractingTopBar) {
-                setState(() => _isInteractingTopBar = false);
-              }
-            },
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(20, topIslandPadding, 20, 6),
-              child: SizedBox(
-                height: 38,
-                child: Stack(
-                  clipBehavior: Clip.none,
+  /// Apple Siri Suggestion Inset Tile
+  Widget _buildInsightTile({
+    required String rawInsight,
+    required Color textColor,
+    required Color secondaryTextColor,
+    required bool isDark,
+  }) {
+    IconData icon = CupertinoIcons.sparkles;
+    Color iconColor = const Color(0xFF007AFF);
+    String title = "Saran Finansial";
+    String body = rawInsight;
+    String badge = "INFO";
+
+    if (rawInsight.contains("Defisit") || rawInsight.contains("⚠️")) {
+      icon = CupertinoIcons.exclamationmark_triangle_fill;
+      iconColor = const Color(0xFFFF3B30);
+      title = "Peringatan Arus Kas";
+      body = rawInsight.replaceAll("⚠️ ", "");
+      badge = "PERINGATAN";
+    } else if (rawInsight.contains("Mantap") || rawInsight.contains("🌟") || rawInsight.contains(">25%")) {
+      icon = CupertinoIcons.star_fill;
+      iconColor = const Color(0xFF34C759);
+      title = "Rasio Tabungan Prima";
+      body = rawInsight.replaceAll("🌟 ", "");
+      badge = "OPTIMAL";
+    } else if (rawInsight.contains("mendominasi") || rawInsight.contains("Kategori")) {
+      icon = CupertinoIcons.chart_pie_fill;
+      iconColor = const Color(0xFF5856D6);
+      title = "Dominasi Pengeluaran";
+      body = rawInsight.replaceAll("💡 ", "");
+      badge = "ANALISA";
+    } else if (rawInsight.contains("Keinginan") || rawInsight.contains("Lifestyle") || rawInsight.contains("☕")) {
+      icon = CupertinoIcons.bag_fill;
+      iconColor = const Color(0xFFFF9500);
+      title = "Porsi Gaya Hidup";
+      body = rawInsight.replaceAll("☕ ", "").replaceAll("🎯 ", "");
+      badge = "KONTROL";
+    } else if (rawInsight.contains("lokal") || rawInsight.contains("internet") || rawInsight.contains("🔒")) {
+      icon = CupertinoIcons.lock_shield_fill;
+      iconColor = const Color(0xFF5AC8FA);
+      title = "Privasi On-Device Mutlak";
+      body = rawInsight.replaceAll("🔒 ", "");
+      badge = "AMAN";
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Apple Squircle Icon dengan Soft Tinted Jewel Glass
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: isDark ? 0.18 : 0.10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: iconColor.withValues(alpha: isDark ? 0.28 : 0.16),
+                width: 0.8,
+              ),
+            ),
+            child: Icon(icon, color: iconColor, size: 19),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Pojok Kiri Atas: Floating Liquid Pill [ ✨ SakuAI ]
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      width: 136,
-                      height: 38,
-                      child: LiquidGlassLens(
-                        style: pillGlassStyle,
-                        touch: jellyTouch,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Center(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF34C759).withValues(alpha: 0.15),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      CupertinoIcons.sparkles,
-                                      color: Color(0xFF34C759),
-                                      size: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 7),
-                                  Text(
-                                    "SakuAI",
-                                    style: TextStyle(
-                                      color: textColor,
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
                       ),
                     ),
-
-                    // Pojok Kanan Atas: Floating Liquid Badge [ 🛡️ 100% Offline ]
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      width: 126,
-                      height: 38,
-                      child: LiquidGlassLens(
-                        style: pillGlassStyle,
-                        touch: jellyTouch,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Center(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    CupertinoIcons.checkmark_shield_fill,
-                                    color: Color(0xFF34C759),
-                                    size: 13,
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    "100% Offline",
-                                    style: TextStyle(
-                                      color: const Color(0xFF34C759),
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: iconColor.withValues(alpha: isDark ? 0.15 : 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: iconColor.withValues(alpha: isDark ? 0.25 : 0.14),
+                          width: 0.6,
+                        ),
+                      ),
+                      child: Text(
+                        badge,
+                        style: TextStyle(
+                          color: iconColor,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 3),
+                Text(
+                  body,
+                  style: TextStyle(
+                    color: secondaryTextColor,
+                    fontSize: 12.5,
+                    height: 1.38,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
-  static Widget _buildLegendItem({
+  Widget _buildLegendItem({
     required String label,
     required String percentage,
+    required String target,
     required Color color,
-    required bool isDark,
+    required Color textColor,
+    required Color secondaryTextColor,
+    CrossAxisAlignment alignment = CrossAxisAlignment.start,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              percentage,
-              style: TextStyle(
-                color: isDark ? Colors.white : Colors.black,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: alignment,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            color: isDark ? Colors.white54 : Colors.black45,
-            fontSize: 10,
+              const SizedBox(width: 5),
+              Text(
+                percentage,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.1,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 1.5),
+          Text(
+            target,
+            style: TextStyle(
+              color: secondaryTextColor,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
+              letterSpacing: -0.1,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 }

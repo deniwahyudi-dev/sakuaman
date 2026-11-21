@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'bouncy_touch_wrapper.dart';
+import '../services/promotion_manager.dart';
+import 'saku_logo.dart';
 
 class LiquidBalanceCard extends StatefulWidget {
   final double balance;
@@ -28,8 +28,7 @@ class LiquidBalanceCard extends StatefulWidget {
 }
 
 class _LiquidBalanceCardState extends State<LiquidBalanceCard>
-    with TickerProviderStateMixin {
-  late AnimationController _waveController;
+    with SingleTickerProviderStateMixin {
   late AnimationController _springController;
   late Animation<Offset> _springAnimation;
 
@@ -42,10 +41,6 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
   @override
   void initState() {
     super.initState();
-    _waveController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3200),
-    )..repeat();
 
     _springController = AnimationController(
       vsync: this,
@@ -70,12 +65,12 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
   @override
   void dispose() {
     _holdTimer?.cancel();
-    _waveController.dispose();
     _springController.dispose();
     super.dispose();
   }
 
   void _onPointerDown(PointerDownEvent event) {
+    ProMotionManager.instance.reportInteraction();
     _pointerDownPos = event.position;
     _springController.stop();
     _holdTimer?.cancel();
@@ -140,40 +135,30 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
 
   @override
   Widget build(BuildContext context) {
-    // Dynamic Luxury Gradients
+    // ── APPLE WALLET / VISIONOS TITANIUM OBSIDIAN PALETTE ──
     final List<Color> bgGradientColors = widget.isDark
         ? const [
-            Color(0xFF030A1C),
-            Color(0xFF071B3E),
-            Color(0xFF0A2E68),
+            Color(0xFF1C1C1E), // Apple System Gray 6
+            Color(0xFF141416), // Dark Titanium
+            Color(0xFF0A0A0C), // Pure Obsidian
           ]
         : const [
-            Color(0xFF0052D4),
-            Color(0xFF4364F7),
-            Color(0xFF00C4FF),
+            Color(0xFF1C1C1E), // Space Black
+            Color(0xFF141416), // Titanium
+            Color(0xFF0A0A0C), // Deep Obsidian
           ];
 
-    final Color backWaveColor = widget.isDark
-        ? const Color(0xFF38BDF8).withValues(alpha: 0.28)
-        : const Color(0xFFFFFFFF).withValues(alpha: 0.25);
-
-    final Color frontWaveColor = widget.isDark
-        ? const Color(0xFF007AFF).withValues(alpha: 0.70)
-        : const Color(0xFFFFFFFF).withValues(alpha: 0.40);
-
-    final Color capsuleBgColor = widget.isDark
-        ? const Color(0xFF050B18).withValues(alpha: 0.35)
-        : Colors.white.withValues(alpha: 0.22);
-
-    final Color capsuleBorderColor = widget.isDark
-        ? Colors.white.withValues(alpha: 0.22)
-        : Colors.white.withValues(alpha: 0.40);
+    final Color radialSpecularColor = widget.isDark
+        ? Colors.white.withValues(alpha: 0.08) // Apple Card brushed titanium sheen
+        : Colors.white.withValues(alpha: 0.12);
 
     // Dynamic subtle elastic deformation (melar & mantul tipis, volume conserved)
     final double stretchFactorX = (_dragOffset.dx.abs() / 450).clamp(0.0, 0.025);
     final double stretchFactorY = (_dragOffset.dy.abs() / 400).clamp(0.0, 0.025);
-    final double scaleX = (1.0 + stretchFactorX - stretchFactorY * 0.5) * (_isHolding ? 1.015 : 1.0);
-    final double scaleY = (1.0 + stretchFactorY - stretchFactorX * 0.5) * (_isHolding ? 1.015 : 1.0);
+    final double scaleX =
+        (1.0 + stretchFactorX - stretchFactorY * 0.5) * (_isHolding ? 1.015 : 1.0);
+    final double scaleY =
+        (1.0 + stretchFactorY - stretchFactorX * 0.5) * (_isHolding ? 1.015 : 1.0);
 
     return Listener(
       behavior: HitTestBehavior.translucent,
@@ -187,139 +172,142 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
           ..translate(_dragOffset.dx * 0.8, _dragOffset.dy * 0.8)
           ..scale(scaleX, scaleY),
         child: Container(
-          height: 236,
+          height: 232,
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: widget.isDark
-                  ? const Color(0xFF007AFF).withValues(alpha: 0.35)
-                  : const Color(0xFF0052D4).withValues(alpha: 0.30),
-              blurRadius: 28,
-              offset: const Offset(0, 10),
-            ),
-            if (widget.isDark)
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: [
               BoxShadow(
-                color: const Color(0xFF38BDF8).withValues(alpha: 0.12),
-                blurRadius: 18,
-                offset: const Offset(0, 2),
+                color: Colors.black.withValues(alpha: widget.isDark ? 0.60 : 0.22),
+                blurRadius: 28,
+                offset: const Offset(0, 10),
               ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: Stack(
-            children: [
-              // Deep Base Gradient
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: bgGradientColors,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              if (!widget.isDark)
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
+                ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(26),
+            child: Stack(
+              children: [
+                // 1. Deep Base Titanium Obsidian Gradient
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: bgGradientColors,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      stops: const [0.0, 0.55, 1.0],
+                    ),
                   ),
                 ),
-              ),
 
-              // Liquid Wave Layer 1 (Glowing Back Wave)
-              AnimatedBuilder(
-                animation: _waveController,
-                builder: (context, child) {
-                  return CustomPaint(
-                    size: const Size(double.infinity, 236),
-                    painter: _LiquidWavePainter(
-                      waveProgress: _waveController.value,
-                      color: backWaveColor,
-                      waveHeight: 14.0,
-                      frequency: 1.8,
-                      offsetY: 0.52,
-                      phaseShift: 0.0,
-                    ),
-                  );
-                },
-              ),
-
-              // Liquid Wave Layer 2 (Vibrant Front Wave)
-              AnimatedBuilder(
-                animation: _waveController,
-                builder: (context, child) {
-                  return CustomPaint(
-                    size: const Size(double.infinity, 236),
-                    painter: _LiquidWavePainter(
-                      waveProgress: _waveController.value,
-                      color: frontWaveColor,
-                      waveHeight: 18.0,
-                      frequency: 2.2,
-                      offsetY: 0.58,
-                      phaseShift: math.pi / 2,
-                    ),
-                  );
-                },
-              ),
-
-              // Frosted Glass Overlap with Specular Iridescent Highlights
-              Positioned.fill(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
+                // 2. Specular Radial Glow (Top-Right Sheen ala Apple Card)
+                Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: widget.isDark
-                            ? const Color(0xFF70D6FF).withValues(alpha: 0.35)
-                            : Colors.white.withValues(alpha: 0.45),
-                        width: 1.2,
-                      ),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                      gradient: RadialGradient(
+                        center: const Alignment(0.85, -0.85),
+                        radius: 1.15,
                         colors: [
-                          Colors.white.withValues(alpha: widget.isDark ? 0.22 : 0.30),
-                          Colors.white.withValues(alpha: 0.04),
+                          radialSpecularColor,
+                          Colors.transparent,
                         ],
+                        stops: const [0.0, 0.70],
                       ),
                     ),
-                    padding: const EdgeInsets.all(20),
+                  ),
+                ),
+
+                // 3. Apple Wallet Diagonal Light Sheen (Brushed Titanium Sheen)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: const Alignment(-1.0, -1.0),
+                        end: const Alignment(0.8, 0.8),
+                        colors: [
+                          Colors.white.withValues(alpha: widget.isDark ? 0.08 : 0.12),
+                          Colors.white.withValues(alpha: 0.02),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.35, 0.75],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 4. VisionOS Top Edge Specular Glare Arc
+                Positioned(
+                  top: 0,
+                  left: 24,
+                  right: 24,
+                  height: 1.2,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Colors.white.withValues(alpha: 0.50),
+                          Colors.white.withValues(alpha: 0.85),
+                          Colors.white.withValues(alpha: 0.50),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 5. Frosted Specular Border & Surface Card Content
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(
+                        color: widget.isDark
+                            ? Colors.white.withValues(alpha: 0.18)
+                            : Colors.white.withValues(alpha: 0.28),
+                        width: 1.2,
+                      ),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header Card
+                        // ── Header Card ──
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(7),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.22),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      CupertinoIcons.shield_fill,
-                                      color: Colors.white,
-                                      size: 15,
-                                    ),
+                            // Left Brand: SakuLogo + SakuAman + Contactless
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SakuLogo(size: 26, isDark: true),
+                                const SizedBox(width: 9),
+                                const Text(
+                                  "SakuAman",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.3,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      "Saldo Kas SakuAman",
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.95),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: -0.2,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  CupertinoIcons.radiowaves_right,
+                                  color: Colors.white.withValues(alpha: 0.45),
+                                  size: 14,
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
+
+                            // Right: Privacy Toggle Button (Liquid Glass Circle)
                             GestureDetector(
                               key: const ValueKey('privacy_toggle_button'),
                               behavior: HitTestBehavior.opaque,
@@ -330,24 +318,29 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
                                 });
                               },
                               child: Container(
-                                width: 28,
-                                height: 28,
+                                width: 32,
+                                height: 32,
                                 decoration: BoxDecoration(
-                                  color: capsuleBgColor,
+                                  color: Colors.white.withValues(alpha: 0.09),
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: capsuleBorderColor,
+                                    color: Colors.white.withValues(alpha: 0.18),
                                     width: 0.8,
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.15),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 child: Center(
                                   child: Icon(
                                     _isBalanceVisible
                                         ? CupertinoIcons.eye_fill
                                         : CupertinoIcons.eye_slash_fill,
-                                    color: widget.isDark
-                                        ? const Color(0xFF38BDF8)
-                                        : Colors.white,
+                                    color: Colors.white,
                                     size: 14.5,
                                   ),
                                 ),
@@ -356,9 +349,9 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
                           ],
                         ),
 
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 14),
 
-                        // Nominal Saldo (Fitted to prevent overflow)
+                        // ── Nominal Saldo (Tabular Figures & Razor-Sharp Clarity) ──
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
@@ -368,33 +361,62 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
                                 : "Rp ••••••••",
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 34,
+                              fontWeight: FontWeight.w700,
                               letterSpacing: -0.8,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black38,
-                                  blurRadius: 10,
-                                  offset: Offset(0, 2),
-                                ),
+                              fontFeatures: [
+                                FontFeature.tabularFigures(),
                               ],
                             ),
                           ),
                         ),
 
+                        const SizedBox(height: 5),
+
+                        // Subtitle Status / Security Chip (Apple Green dot)
+                        Row(
+                          children: [
+                            Container(
+                              width: 6.5,
+                              height: 6.5,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF34C759),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF34C759).withValues(alpha: 0.5),
+                                    blurRadius: 6,
+                                    spreadRadius: 0.5,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 7),
+                            Text(
+                              "Kas Utama • On-Device Encrypted",
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.60),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: -0.1,
+                              ),
+                            ),
+                          ],
+                        ),
+
                         const Spacer(),
 
-                        // Bar Pemasukan & Pengeluaran (Capsule Glass)
+                        // ── Bar Pemasukan & Pengeluaran (Capsule Glass) ──
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
+                            horizontal: 14,
+                            vertical: 9,
                           ),
                           decoration: BoxDecoration(
-                            color: capsuleBgColor,
-                            borderRadius: BorderRadius.circular(20),
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(18),
                             border: Border.all(
-                              color: capsuleBorderColor,
+                              color: Colors.white.withValues(alpha: 0.14),
                               width: 0.8,
                             ),
                           ),
@@ -405,19 +427,25 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
                                 child: Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.all(5),
+                                      width: 28,
+                                      height: 28,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF00E676)
-                                            .withValues(alpha: widget.isDark ? 0.35 : 0.85),
-                                        shape: BoxShape.circle,
+                                        color: const Color(0xFF34C759).withValues(alpha: 0.16),
+                                        borderRadius: BorderRadius.circular(9),
+                                        border: Border.all(
+                                          color: const Color(0xFF34C759).withValues(alpha: 0.28),
+                                          width: 0.8,
+                                        ),
                                       ),
-                                      child: const Icon(
-                                        CupertinoIcons.arrow_down_left,
-                                        color: Colors.white,
-                                        size: 13,
+                                      child: const Center(
+                                        child: Icon(
+                                          CupertinoIcons.arrow_down_left,
+                                          color: Color(0xFF34C759),
+                                          size: 13,
+                                        ),
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(width: 9),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,13 +454,14 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
                                           Text(
                                             "Pemasukan",
                                             style: TextStyle(
-                                              color: Colors.white.withValues(alpha: 0.85),
+                                              color: Colors.white.withValues(alpha: 0.70),
                                               fontSize: 10.5,
                                               fontWeight: FontWeight.w500,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
+                                          const SizedBox(height: 1),
                                           FittedBox(
                                             fit: BoxFit.scaleDown,
                                             alignment: Alignment.centerLeft,
@@ -442,8 +471,12 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
                                                   : "Rp ••••••",
                                               style: const TextStyle(
                                                 color: Colors.white,
-                                                fontSize: 12.5,
+                                                fontSize: 13,
                                                 fontWeight: FontWeight.w700,
+                                                letterSpacing: -0.2,
+                                                fontFeatures: [
+                                                  FontFeature.tabularFigures(),
+                                                ],
                                               ),
                                             ),
                                           ),
@@ -454,12 +487,12 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
                                 ),
                               ),
 
-                              // Divider
+                              // Vertical Divider
                               Container(
-                                height: 22,
-                                width: 1,
-                                margin: const EdgeInsets.symmetric(horizontal: 6),
-                                color: Colors.white.withValues(alpha: 0.25),
+                                height: 24,
+                                width: 0.6,
+                                margin: const EdgeInsets.symmetric(horizontal: 10),
+                                color: Colors.white.withValues(alpha: 0.16),
                               ),
 
                               // Pengeluaran
@@ -467,19 +500,25 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
                                 child: Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.all(5),
+                                      width: 28,
+                                      height: 28,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFFF2A55)
-                                            .withValues(alpha: widget.isDark ? 0.35 : 0.85),
-                                        shape: BoxShape.circle,
+                                        color: const Color(0xFFFF3B30).withValues(alpha: 0.16),
+                                        borderRadius: BorderRadius.circular(9),
+                                        border: Border.all(
+                                          color: const Color(0xFFFF3B30).withValues(alpha: 0.28),
+                                          width: 0.8,
+                                        ),
                                       ),
-                                      child: const Icon(
-                                        CupertinoIcons.arrow_up_right,
-                                        color: Colors.white,
-                                        size: 13,
+                                      child: const Center(
+                                        child: Icon(
+                                          CupertinoIcons.arrow_up_right,
+                                          color: Color(0xFFFF453A),
+                                          size: 13,
+                                        ),
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(width: 9),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -488,13 +527,14 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
                                           Text(
                                             "Pengeluaran",
                                             style: TextStyle(
-                                              color: Colors.white.withValues(alpha: 0.85),
+                                              color: Colors.white.withValues(alpha: 0.70),
                                               fontSize: 10.5,
                                               fontWeight: FontWeight.w500,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
+                                          const SizedBox(height: 1),
                                           FittedBox(
                                             fit: BoxFit.scaleDown,
                                             alignment: Alignment.centerLeft,
@@ -504,8 +544,12 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
                                                   : "Rp ••••••",
                                               style: const TextStyle(
                                                 color: Colors.white,
-                                                fontSize: 12.5,
+                                                fontSize: 13,
                                                 fontWeight: FontWeight.w700,
+                                                letterSpacing: -0.2,
+                                                fontFeatures: [
+                                                  FontFeature.tabularFigures(),
+                                                ],
                                               ),
                                             ),
                                           ),
@@ -522,62 +566,11 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
-}
-
-class _LiquidWavePainter extends CustomPainter {
-  final double waveProgress;
-  final Color color;
-  final double waveHeight;
-  final double frequency;
-  final double offsetY;
-  final double phaseShift;
-
-  _LiquidWavePainter({
-    required this.waveProgress,
-    required this.color,
-    required this.waveHeight,
-    required this.frequency,
-    required this.offsetY,
-    required this.phaseShift,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    final baseHeight = size.height * offsetY;
-
-    path.moveTo(0, size.height);
-    path.lineTo(0, baseHeight);
-
-    for (double i = 0; i <= size.width; i++) {
-      final angle = (i / size.width * 2 * math.pi * frequency) +
-          (waveProgress * 2 * math.pi) +
-          phaseShift;
-      final y = baseHeight + math.sin(angle) * waveHeight;
-      path.lineTo(i, y);
-    }
-
-    path.lineTo(size.width, size.height);
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _LiquidWavePainter oldDelegate) {
-    return oldDelegate.waveProgress != waveProgress ||
-        oldDelegate.color != color;
+    );
   }
 }

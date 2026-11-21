@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:liquid_glass_easy/liquid_glass_easy.dart';
+import 'services/preferences_service.dart';
 import 'theme/saku_theme.dart';
+import 'screens/splash_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/main_tab_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
+
+  // Muat status cache preferensi lokal (Tema & Riwayat Onboarding)
+  final initialIsDark = await PreferencesService.isDarkMode();
+  final hasSeenOnboarding = await PreferencesService.hasSeenOnboarding();
 
   // Warm-up and pre-compile Liquid Glass Shaders directly onto GPU
   try {
@@ -21,39 +28,58 @@ void main() async {
 
   // 2. PAKSA Status Bar & Navigation Bar 100% transparan (0 opacity) tanpa pembatas/scrim OS
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
+    SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      statusBarBrightness: Brightness.dark,
+      statusBarIconBrightness: initialIsDark ? Brightness.light : Brightness.dark,
+      statusBarBrightness: initialIsDark ? Brightness.dark : Brightness.light,
       systemStatusBarContrastEnforced: false, // MATIKAN pembatas scrim/bayangan dari OS Android!
       systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarIconBrightness: initialIsDark ? Brightness.light : Brightness.dark,
       systemNavigationBarContrastEnforced: false, // MATIKAN pembatas navigation bar!
       systemNavigationBarDividerColor: Colors.transparent,
     ),
   );
 
-  runApp(const SakuAmanApp());
+  runApp(SakuAmanApp(
+    initialIsDark: initialIsDark,
+    hasSeenOnboarding: hasSeenOnboarding,
+    showSplash: true,
+  ));
 }
 
-class SakuAmanApp extends StatefulWidget {
-  const SakuAmanApp({super.key});
+class SakuAmanApp extends StatelessWidget {
+  final bool initialIsDark;
+  final bool hasSeenOnboarding;
+  final bool showSplash;
+  final Widget? home;
 
-  @override
-  State<SakuAmanApp> createState() => _SakuAmanAppState();
-}
-
-class _SakuAmanAppState extends State<SakuAmanApp> {
-  // Default mode: Crisp Dark Mode (bisa di-toggle langsung di dalam app)
-  final bool _isDark = true;
+  const SakuAmanApp({
+    super.key,
+    this.initialIsDark = false,
+    this.hasSeenOnboarding = true,
+    this.showSplash = false,
+    this.home,
+  });
 
   @override
   Widget build(BuildContext context) {
+    Widget defaultHome;
+    if (showSplash) {
+      defaultHome = SplashScreen(
+        isDark: initialIsDark,
+        hasSeenOnboarding: hasSeenOnboarding,
+      );
+    } else {
+      defaultHome = hasSeenOnboarding
+          ? MainTabScreen(initialIsDark: initialIsDark)
+          : OnboardingScreen(isDark: initialIsDark);
+    }
+
     return MaterialApp(
       title: 'SakuAman',
       debugShowCheckedModeBanner: false,
-      theme: SakuTheme.getTheme(isDark: _isDark),
-      home: MainTabScreen(initialIsDark: _isDark),
+      theme: SakuTheme.getTheme(isDark: initialIsDark),
+      home: home ?? defaultHome,
     );
   }
 }

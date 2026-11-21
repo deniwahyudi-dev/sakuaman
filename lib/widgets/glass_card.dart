@@ -34,20 +34,20 @@ class GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectivePadding = padding ?? const EdgeInsets.all(16);
 
-    // Dark Mode: Smoked Obsidian Glass (Calm, Deep & Anti-Rame)
+    // Dark Mode: Apple System Gray 6 / Smoked Charcoal Glass (Level 1 Elevation)
     // Light Mode: Crystal Ice Glass with Prismatic Clarity
     final defaultBgColor = isDark
-        ? const Color(0xFF101626).withValues(alpha: 0.72)
+        ? const Color(0xFF1C1C1E).withValues(alpha: 0.85)
         : Colors.white.withValues(alpha: 0.84);
 
     final effectiveColor = color ?? defaultBgColor;
 
     final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.09)
+        ? Colors.white.withValues(alpha: 0.12)
         : const Color(0xFFFFFFFF).withValues(alpha: 0.85);
 
     final shadowColor = isDark
-        ? Colors.black.withValues(alpha: 0.35)
+        ? Colors.black.withValues(alpha: 0.45)
         : const Color(0xFF0F172A).withValues(alpha: 0.05);
 
     Widget content = Container(

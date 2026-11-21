@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class SakuTheme {
-  // Ultra-Luxe VisionOS / Cyber Jewel Accents
-  static const Color cyberCyan = Color(0xFF00F5D4);
-  static const Color electricBlue = Color(0xFF007AFF);
-  static const Color royalIndigo = Color(0xFF5856D6);
-  static const Color neonPurple = Color(0xFF7209B7);
-  static const Color neonGreen = Color(0xFF00E676);
-  static const Color crimsonRed = Color(0xFFFF2A55);
-  static const Color radiantAmber = Color(0xFFFF9E00);
-  static const Color sunsetPink = Color(0xFFF72585);
+  // Ultra-Luxe VisionOS / Apple System Jewel Accents
+  static const Color cyberCyan = Color(0xFF5AC8FA);   // Apple System Teal
+  static const Color electricBlue = Color(0xFF007AFF); // Apple System Blue
+  static const Color royalIndigo = Color(0xFF5856D6);  // Apple System Indigo
+  static const Color neonPurple = Color(0xFFAF52DE);   // Apple System Purple
+  static const Color neonGreen = Color(0xFF34C759);    // Apple System Green
+  static const Color crimsonRed = Color(0xFFFF3B30);   // Apple System Red
+  static const Color radiantAmber = Color(0xFFFF9500); // Apple System Orange
+  static const Color sunsetPink = Color(0xFFFF2D55);   // Apple System Pink
 
   // iOS Clean Light Mode (Pristine Pearl Ceramic & Crystal Ice)
   static const Color lightBg = Color(0xFFF6F8FC);
@@ -23,14 +23,14 @@ class SakuTheme {
   static const Color lightPillBg = Color(0xFFE2E8F0);
   static const Color lightPillBgActive = Color(0xFF0F172A);
 
-  // iOS Clean Dark Mode (Smoked Obsidian & Midnight Titanium)
-  static const Color darkBg = Color(0xFF090C15);
-  static const Color darkCard = Color(0xFF101626);
-  static const Color darkCardBorder = Color(0xFF1B2338);
-  static const Color darkCardBorderSpecular = Color(0xFF2B3857);
+  // iOS Clean Dark Mode (Apple Pure OLED Black & Smoked Charcoal Gray 6)
+  static const Color darkBg = Color(0xFF000000);
+  static const Color darkCard = Color(0xFF1C1C1E);
+  static const Color darkCardBorder = Color(0xFF2C2C2E);
+  static const Color darkCardBorderSpecular = Color(0xFF3A3A3C);
   static const Color darkTextPrimary = Color(0xFFFFFFFF);
-  static const Color darkTextSecondary = Color(0xFF94A3B8);
-  static const Color darkPillBg = Color(0xFF151C30);
+  static const Color darkTextSecondary = Color(0xFF8E8E93);
+  static const Color darkPillBg = Color(0xFF2C2C2E);
   static const Color darkPillBgActive = Color(0xFFFFFFFF);
 
   static ThemeData getTheme({required bool isDark}) {
