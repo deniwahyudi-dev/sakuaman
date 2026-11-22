@@ -6,6 +6,7 @@ import '../models/transaction.dart';
 import 'glass_card.dart';
 import 'bouncy_touch_wrapper.dart';
 import 'receipt_scanner_sheet.dart';
+import '../utils/rupiah_input_formatter.dart';
 
 class AddTransactionSheet extends StatefulWidget {
   final Function(TransactionModel) onAdd;
@@ -107,7 +108,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   }
 
   void _submit() {
-    final rawAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final rawAmount = _amountController.text.replaceAll('.', '');
     final amount = double.tryParse(rawAmount) ?? 0.0;
 
     if (amount <= 0) {
@@ -157,6 +158,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     final secondaryTextColor = widget.isDark
         ? Colors.white.withValues(alpha: 0.6)
         : Colors.black.withValues(alpha: 0.55);
+    
+    final inactiveTabTextColor = widget.isDark ? Colors.white60 : Colors.black54;
 
     return Container(
       decoration: BoxDecoration(
@@ -169,463 +172,455 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           width: 0.8,
         ),
       ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        left: 20,
-        right: 20,
-        top: 12,
-      ),
       child: SafeArea(
         top: false,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // iOS Drag Handle
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4.5,
-                  decoration: BoxDecoration(
-                    color: widget.isDark
-                        ? Colors.white.withValues(alpha: 0.3)
-                        : Colors.black.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Title
-              Center(
-                child: Text(
-                  "Catat Transaksi SakuAman",
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // ── BANNER SCAN STRUK KASIR / SHOPEE ──
-              BouncyTouchWrapper(
-                onTap: _openReceiptScanner,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: widget.isDark
-                          ? [
-                              const Color(0xFF007AFF).withValues(alpha: 0.20),
-                              const Color(0xFF5856D6).withValues(alpha: 0.15),
-                            ]
-                          : [
-                              const Color(0xFF007AFF).withValues(alpha: 0.12),
-                              const Color(0xFF5856D6).withValues(alpha: 0.08),
-                            ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFF007AFF).withValues(alpha: 0.40),
-                      width: 1.0,
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            left: 20,
+            right: 20,
+            top: 12,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // iOS Drag Handle
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4.5,
+                    decoration: BoxDecoration(
+                      color: widget.isDark
+                          ? Colors.white.withValues(alpha: 0.3)
+                          : Colors.black.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(7.5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF007AFF).withValues(alpha: 0.25),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          CupertinoIcons.camera_viewfinder,
-                          color: Color(0xFF007AFF),
-                          size: 17,
-                        ),
+                ),
+                const SizedBox(height: 16),
+
+                // Title
+                Center(
+                  child: Text(
+                    "Catat Transaksi SakuAman",
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // ── BANNER SCAN STRUK KASIR / SHOPEE ──
+                BouncyTouchWrapper(
+                  onTap: _openReceiptScanner,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: widget.isDark
+                            ? [
+                                const Color(0xFF007AFF).withValues(alpha: 0.20),
+                                const Color(0xFF5856D6).withValues(alpha: 0.15),
+                              ]
+                            : [
+                                const Color(0xFF007AFF).withValues(alpha: 0.12),
+                                const Color(0xFF5856D6).withValues(alpha: 0.08),
+                              ],
                       ),
-                      const SizedBox(width: 11),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  "Scan Foto Struk / Nota Kasir",
-                                  style: TextStyle(
-                                    color: textColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 1.5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF34C759)
-                                        .withValues(alpha: 0.20),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    "OCR",
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFF007AFF).withValues(alpha: 0.40),
+                        width: 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF007AFF).withValues(alpha: 0.25),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.camera_viewfinder,
+                            color: Color(0xFF007AFF),
+                            size: 17,
+                          ),
+                        ),
+                        const SizedBox(width: 11),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    "Scan Foto Struk / Nota Kasir",
                                     style: TextStyle(
-                                      color: Color(0xFF34C759),
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w800,
+                                      color: textColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF34C759)
+                                          .withValues(alpha: 0.20),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      "OCR",
+                                      style: TextStyle(
+                                        color: Color(0xFF34C759),
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 1.5),
+                              Text(
+                                "Auto-catat Alfamart, Indomaret, Shopee, SPBU",
+                                style: TextStyle(
+                                  color: secondaryTextColor,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
                                 ),
-                              ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          CupertinoIcons.chevron_right,
+                          color: secondaryTextColor,
+                          size: 14,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // Segmented Switch
+                Container(
+                  decoration: BoxDecoration(
+                    color: widget.isDark
+                        ? Colors.black.withValues(alpha: 0.35)
+                        : const Color(0xFFE5E5EA).withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedType = TransactionType.expense;
+                              _selectedCategory = _expenseCategories.first;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _selectedType == TransactionType.expense
+                                  ? const Color(0xFFFF3B30)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            const SizedBox(height: 1.5),
-                            Text(
-                              "Auto-catat Alfamart, Indomaret, Shopee, SPBU",
-                              style: TextStyle(
-                                color: secondaryTextColor,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w500,
+                            child: Center(
+                              child: Text(
+                                "Pengeluaran",
+                                style: TextStyle(
+                                  color: _selectedType == TransactionType.expense
+                                      ? Colors.white
+                                      : inactiveTabTextColor,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                      Icon(
-                        CupertinoIcons.chevron_right,
-                        color: secondaryTextColor,
-                        size: 14,
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedType = TransactionType.income;
+                              _selectedCategory = _incomeCategories.first;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _selectedType == TransactionType.income
+                                  ? const Color(0xFF34C759)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "Pemasukan",
+                                style: TextStyle(
+                                  color: _selectedType == TransactionType.income
+                                      ? Colors.white
+                                      : inactiveTabTextColor,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 14),
+                const SizedBox(height: 18),
 
-              // Segmented Switch
-              Container(
-                decoration: BoxDecoration(
-                  color: widget.isDark
-                      ? Colors.black.withValues(alpha: 0.35)
-                      : const Color(0xFFE5E5EA).withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedType = TransactionType.expense;
-                            _selectedCategory = _expenseCategories.first;
-                          });
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: _selectedType == TransactionType.expense
-                                ? const Color(0xFFFF3B30)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: _selectedType == TransactionType.expense
-                                ? [
-                                    BoxShadow(
-                                      color: const Color(0xFFFF3B30)
-                                          .withValues(alpha: 0.4),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 3),
-                                    )
-                                  ]
-                                : [],
-                          ),
-                          child: const Center(
-                            child: Text(
-                              "Pengeluaran",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
+                // Nominal Input Box
+                GlassCard(
+                  isDark: widget.isDark,
+                  borderRadius: 18,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Nominal (Rp)",
+                        style: TextStyle(
+                          color: secondaryTextColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            "Rp ",
+                            style: TextStyle(
+                              color: _selectedType == TransactionType.expense
+                                  ? const Color(0xFFFF453A)
+                                  : const Color(0xFF30D158),
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedType = TransactionType.income;
-                            _selectedCategory = _incomeCategories.first;
-                          });
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: _selectedType == TransactionType.income
-                                ? const Color(0xFF34C759)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: _selectedType == TransactionType.income
-                                ? [
-                                    BoxShadow(
-                                      color: const Color(0xFF34C759)
-                                          .withValues(alpha: 0.4),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 3),
-                                    )
-                                  ]
-                                : [],
-                          ),
-                          child: const Center(
-                            child: Text(
-                              "Pemasukan",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // Nominal Input Box
-              GlassCard(
-                isDark: widget.isDark,
-                borderRadius: 18,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Nominal (Rp)",
-                      style: TextStyle(
-                        color: secondaryTextColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          "Rp ",
-                          style: TextStyle(
-                            color: _selectedType == TransactionType.expense
-                                ? const Color(0xFFFF453A)
-                                : const Color(0xFF30D158),
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Expanded(
+                          Expanded(
                           child: CupertinoTextField(
                             controller: _amountController,
                             keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              RupiahInputFormatter(),
+                            ],
                             placeholder: "0",
-                            placeholderStyle: TextStyle(
-                              color: secondaryTextColor.withValues(alpha: 0.35),
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
+
+                              placeholderStyle: TextStyle(
+                                color: secondaryTextColor.withValues(alpha: 0.35),
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              decoration: null,
                             ),
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            decoration: null,
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              // Catatan / Deskripsi
-              GlassCard(
-                isDark: widget.isDark,
-                borderRadius: 18,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Keterangan / Merchant",
-                      style: TextStyle(
-                        color: secondaryTextColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    CupertinoTextField(
-                      controller: _titleController,
-                      placeholder: "Contoh: Kopi Kenangan, Nasi Padang, Belanja",
-                      placeholderStyle: TextStyle(
-                        color: secondaryTextColor.withValues(alpha: 0.4),
-                        fontSize: 14,
-                      ),
-                      style: TextStyle(color: textColor, fontSize: 14),
-                      decoration: null,
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              // Kategori Chips
-              Text(
-                "Pilih Kategori",
-                style: TextStyle(
-                  color: secondaryTextColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: categories.map((cat) {
-                  final isSelected = _selectedCategory == cat;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedCategory = cat;
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFF007AFF)
-                            : (widget.isDark
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : const Color(0xFFE5E5EA)),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: isSelected
-                              ? const Color(0xFF70D6FF)
-                              : Colors.transparent,
-                        ),
-                      ),
-                      child: Text(
-                        cat,
+                // Catatan / Deskripsi
+                GlassCard(
+                  isDark: widget.isDark,
+                  borderRadius: 18,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Keterangan / Merchant",
                         style: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : (widget.isDark ? Colors.white70 : Colors.black87),
+                          color: secondaryTextColor,
                           fontSize: 12,
-                          fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(height: 14),
-
-              // Sumber Dana (Source)
-              Text(
-                "Sumber Dana / Rekening",
-                style: TextStyle(
-                  color: secondaryTextColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                      const SizedBox(height: 4),
+                      CupertinoTextField(
+                        controller: _titleController,
+                        placeholder: "Contoh: Kopi Kenangan, Nasi Padang, Belanja",
+                        placeholderStyle: TextStyle(
+                          color: secondaryTextColor.withValues(alpha: 0.4),
+                          fontSize: 14,
+                        ),
+                        style: TextStyle(color: textColor, fontSize: 14),
+                        decoration: null,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: _sources.map((src) {
-                    final isSelected = _selectedSource == src;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedSource = src),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 7),
-                          decoration: BoxDecoration(
+
+                const SizedBox(height: 14),
+
+                // Kategori Chips
+                Text(
+                  "Pilih Kategori",
+                  style: TextStyle(
+                    color: secondaryTextColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: categories.map((cat) {
+                    final isSelected = _selectedCategory == cat;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedCategory = cat;
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF007AFF)
+                              : (widget.isDark
+                                  ? Colors.white.withValues(alpha: 0.08)
+                                  : const Color(0xFFE5E5EA)),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
                             color: isSelected
-                                ? (widget.isDark ? Colors.white : Colors.black)
-                                : (widget.isDark
-                                    ? Colors.white.withValues(alpha: 0.08)
-                                    : const Color(0xFFE5E5EA)),
-                            borderRadius: BorderRadius.circular(14),
+                                ? const Color(0xFF70D6FF)
+                                : Colors.transparent,
                           ),
-                          child: Text(
-                            src,
-                            style: TextStyle(
-                              color: isSelected
-                                  ? (widget.isDark ? Colors.black : Colors.white)
-                                  : (widget.isDark
-                                      ? Colors.white70
-                                      : Colors.black87),
-                              fontSize: 12,
-                              fontWeight: isSelected
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
+                        ),
+                        child: Text(
+                          cat,
+                          style: TextStyle(
+                            color: isSelected
+                                ? Colors.white
+                                : (widget.isDark ? Colors.white70 : Colors.black87),
+                            fontSize: 12,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
                           ),
                         ),
                       ),
                     );
                   }).toList(),
                 ),
-              ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 14),
 
-              // Simpan Button
-              CupertinoButton(
-                color: const Color(0xFF007AFF),
-                borderRadius: BorderRadius.circular(20),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                onPressed: _submit,
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(CupertinoIcons.checkmark_alt, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      "Simpan Transaksi",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
+                // Sumber Dana (Source)
+                Text(
+                  "Sumber Dana / Rekening",
+                  style: TextStyle(
+                    color: secondaryTextColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: _sources.map((src) {
+                      final isSelected = _selectedSource == src;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedSource = src),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? (widget.isDark ? Colors.white : Colors.black)
+                                  : (widget.isDark
+                                      ? Colors.white.withValues(alpha: 0.08)
+                                      : const Color(0xFFE5E5EA)),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Text(
+                              src,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? (widget.isDark ? Colors.black : Colors.white)
+                                    : (widget.isDark
+                                        ? Colors.white70
+                                        : Colors.black87),
+                                fontSize: 12,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                CupertinoButton(
+                  color: const Color(0xFF007AFF),
+                  disabledColor: const Color(0xFF007AFF).withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(20),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  onPressed: _amountController.text.isEmpty ? null : _submit,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(CupertinoIcons.checkmark_alt, size: 20, color: Colors.white),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "Simpan", // Teks disederhanakan agar tidak terpotong
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

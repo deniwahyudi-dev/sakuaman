@@ -1,4 +1,5 @@
 import '../models/transaction.dart';
+import '../models/budget.dart';
 
 class FinancialHealthScore {
   final int score; // 0 - 100
@@ -8,6 +9,7 @@ class FinancialHealthScore {
   final double needsPercentage;
   final double wantsPercentage;
   final List<String> insights;
+  final bool hasEnoughData;
 
   FinancialHealthScore({
     required this.score,
@@ -17,13 +19,22 @@ class FinancialHealthScore {
     required this.needsPercentage,
     required this.wantsPercentage,
     required this.insights,
+    this.hasEnoughData = true,
   });
 }
 
 class LocalAIAdvisor {
   /// Menganalisa kesehatan finansial secara lokal tanpa mengirim data keluar HP
-  static FinancialHealthScore analyze(List<TransactionModel> transactions) {
-    if (transactions.isEmpty) {
+  static FinancialHealthScore analyze(
+    List<TransactionModel> transactions, [
+    DateTime? referenceDate,
+    List<Budget>? budgets,
+  ]) {
+    final now = referenceDate ?? DateTime.now();
+    final currentMonthTxs = transactions.where((tx) =>
+        tx.date.year == now.year && tx.date.month == now.month).toList();
+
+    if (currentMonthTxs.isEmpty) {
       return FinancialHealthScore(
         score: 100,
         grade: "Belum Ada Data",
@@ -32,19 +43,20 @@ class LocalAIAdvisor {
         needsPercentage: 0,
         wantsPercentage: 0,
         insights: ["Data mutasi masih kosong."],
+        hasEnoughData: false,
       );
     }
 
     double totalIncome = 0;
     double totalExpense = 0;
 
-    double needsExpense = 0; // Kebutuhan (Makanan, Transport, Tagihan, Kesehatan)
-    double wantsExpense = 0; // Keinginan (Belanja, Hiburan, Lainnya)
+    double needsExpense = 0; // Kebutuhan
+    double wantsExpense = 0; // Keinginan
     double investmentExpense = 0; // Investasi
 
     Map<String, double> categoryExpense = {};
 
-    for (final tx in transactions) {
+    for (final tx in currentMonthTxs) {
       if (tx.type == TransactionType.income) {
         totalIncome += tx.amount;
       } else {
@@ -54,6 +66,7 @@ class LocalAIAdvisor {
 
         switch (tx.category.toLowerCase()) {
           case 'makanan':
+          case 'makanan & minuman':
           case 'transportasi':
           case 'tagihan':
           case 'kesehatan':
@@ -68,6 +81,8 @@ class LocalAIAdvisor {
         }
       }
     }
+
+    final bool enoughData = currentMonthTxs.length >= 3 && totalIncome > 0;
 
     // Jika belum ada pemasukan yang dicatat, gunakan total pengeluaran sebagai acuan dasar
     final double baseRevenue = totalIncome > 0 ? totalIncome : totalExpense * 1.2;
@@ -88,7 +103,7 @@ class LocalAIAdvisor {
     } else if (savingsRate >= 10) {
       score += 5;
     } else if (savingsRate < 0) {
-      score -= 25; // Pengeluaran melebihi pemasukan (Defisit)
+      score -= 25; // Defisit
     }
 
     // 2. Kebutuhan Ideal (50%)
@@ -129,6 +144,21 @@ class LocalAIAdvisor {
       insights.add("🌟 Mantap! Kamu berhasil menyisihkan >25% pemasukanmu. Arus kas sangat stabil.");
     }
 
+    // Budget Insights
+    if (budgets != null && budgets.isNotEmpty) {
+      for (final budget in budgets) {
+        final cat = budget.category;
+        final limit = budget.limit;
+        if (limit > 0 && categoryExpense.containsKey(cat)) {
+          final spent = categoryExpense[cat]!;
+          final ratio = spent / limit;
+          if (ratio >= 0.85) {
+            insights.add("💡 Anggaran '$cat' sudah terpakai ${(ratio * 100).toStringAsFixed(0)}%. Hati-hati!");
+          }
+        }
+      }
+    }
+
     // Cek pengeluaran terbesar
     if (categoryExpense.isNotEmpty) {
       final sorted = categoryExpense.entries.toList()
@@ -161,6 +191,7 @@ class LocalAIAdvisor {
       needsPercentage: needsPercentage,
       wantsPercentage: wantsPercentage,
       insights: insights,
+      hasEnoughData: enoughData,
     );
   }
 }

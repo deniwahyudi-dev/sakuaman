@@ -12,6 +12,7 @@ class TransactionModel {
   final DateTime date;
   final String source; // e.g. "BCA", "GoPay", "Mandiri", "Manual", "DANA", "ShopeePay"
   final String? note;
+  final String? userId;
 
   TransactionModel({
     required this.id,
@@ -22,6 +23,7 @@ class TransactionModel {
     required this.date,
     this.source = "Manual",
     this.note,
+    this.userId,
   });
 
   String get formattedAmount {
@@ -73,29 +75,78 @@ class TransactionModel {
     }
   }
 
-  Color get categoryColor {
+  static Color getCategoryColor(String category) {
     switch (category.toLowerCase()) {
       case 'makanan & minuman':
       case 'makanan':
-        return const Color(0xFFFF9500); // iOS Orange
+        return const Color(0xFFFF9500);
       case 'transportasi':
-        return const Color(0xFF007AFF); // iOS Blue
+        return const Color(0xFF007AFF);
       case 'gaji':
       case 'pendapatan':
-        return const Color(0xFF34C759); // iOS Green
+        return const Color(0xFF34C759);
       case 'belanja':
-        return const Color(0xFFAF52DE); // iOS Purple
+        return const Color(0xFFAF52DE);
       case 'hiburan':
-        return const Color(0xFFFF2D55); // iOS Pink
+        return const Color(0xFFFF2D55);
       case 'tagihan':
       case 'utilitas':
-        return const Color(0xFFFF3B30); // iOS Red
+        return const Color(0xFFFF3B30);
       case 'kesehatan':
-        return const Color(0xFF5AC8FA); // iOS Teal
+        return const Color(0xFF5AC8FA);
       case 'investasi':
-        return const Color(0xFF5856D6); // iOS Indigo
+        return const Color(0xFF5856D6);
       default:
-        return const Color(0xFF8E8E93); // iOS Gray
+        return const Color(0xFF8E8E93);
     }
   }
+
+  Color get categoryColor => getCategoryColor(category);
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'amount': amount,
+      'type': type.index,
+      'category': category,
+      'date': date.toIso8601String(),
+      'source': source,
+      'note': note,
+      'user_id': userId,
+    };
+  }
+
+  factory TransactionModel.fromJson(Map<String, dynamic> json) {
+    return TransactionModel(
+      id: json['id'],
+      title: json['title'],
+      amount: json['amount'],
+      type: TransactionType.values[json['type']],
+      category: json['category'],
+      date: DateTime.parse(json['date']),
+      source: json['source'] ?? "Manual",
+      note: json['note'],
+      userId: json['user_id'],
+    );
+  }
 }
+
+const List<String> kExpenseCategories = [
+  'Makanan & Minuman',
+  'Transportasi',
+  'Belanja',
+  'Hiburan',
+  'Tagihan',
+  'Kesehatan',
+  'Investasi',
+  'Lainnya',
+];
+
+const List<String> kIncomeCategories = [
+  'Gaji',
+  'Bonus',
+  'Investasi',
+  'Hadiah',
+  'Lainnya',
+];

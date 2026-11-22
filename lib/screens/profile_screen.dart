@@ -6,8 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 import '../services/promotion_manager.dart';
 import '../services/native_notification_service.dart';
-import '../widgets/glass_card.dart';
+import '../services/auth_service.dart';
 import '../widgets/bouncy_touch_wrapper.dart';
+import 'auth_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isDark;
@@ -440,6 +441,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             trailingText: "CSV / PDF",
                             onTap: () => _showExportDataSheet(context),
                             textColor: textColor,
+                            secondaryTextColor: secondaryTextColor,
+                            isDark: isDark,
+                          ),
+                          _buildDivider(isDark),
+                          _buildAppleSettingRow(
+                            icon: CupertinoIcons.arrow_right_square_fill,
+                            iconColor: const Color(0xFFFF3B30),
+                            title: "Keluar Akun",
+                            trailingText: "",
+                            onTap: () => _showLogoutDialog(context),
+                            textColor: const Color(0xFFFF3B30),
                             secondaryTextColor: secondaryTextColor,
                             isDark: isDark,
                           ),
@@ -1112,6 +1124,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text("Keluar Akun"),
+        content: const Text("Apakah Anda yakin ingin keluar?"),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal"),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              await AuthService.instance.logout();
+              if (!mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                CupertinoPageRoute(builder: (_) => AuthScreen(isDark: widget.isDark, onThemeChanged: () {})),
+                (route) => false,
+              );
+            },
+            child: const Text("Keluar"),
+          ),
+        ],
       ),
     );
   }

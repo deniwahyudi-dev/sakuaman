@@ -64,8 +64,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 350),
-          pageBuilder: (_, __, ___) => MainTabScreen(initialIsDark: _isDark),
-          transitionsBuilder: (_, animation, __, child) {
+          pageBuilder: (_, _, _) => MainTabScreen(initialIsDark: _isDark),
+          transitionsBuilder: (_, animation, _, child) {
             return FadeTransition(opacity: animation, child: child);
           },
         ),

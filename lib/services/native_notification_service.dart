@@ -52,10 +52,8 @@ class NativeNotificationService {
   }
 
   void _handleIncomingNotification(ServiceNotificationEvent event) {
-    if (event.packageName == null || event.title == null || event.content == null) return;
-    
     // Abaikan notifikasi sistem atau dari aplikasi ini sendiri
-    if (event.packageName!.contains("android") || event.packageName!.contains("com.example.finances")) {
+    if (event.packageName.contains("android") || event.packageName.contains("com.example.finances")) {
         return;
     }
 
@@ -63,9 +61,9 @@ class NativeNotificationService {
     
     // Kirim ke Parser Engine
     final result = NotificationParserEngine.parseNotification(
-      appOrSender: event.packageName ?? "Unknown", 
-      title: event.title ?? "", 
-      body: event.content ?? "",
+      appOrSender: event.packageName, 
+      title: event.title, 
+      body: event.content,
     );
 
     // Jika valid sebagai transaksi finansial, lempar ke UI/Database

@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/ambient_mesh_background.dart';
 import '../widgets/saku_logo.dart';
 import 'onboarding_screen.dart';
+import 'auth_screen.dart';
 import 'main_tab_screen.dart';
 
 /// Screen Pembuka Otentik ala Apple iOS
@@ -12,11 +12,13 @@ import 'main_tab_screen.dart';
 class SplashScreen extends StatefulWidget {
   final bool isDark;
   final bool hasSeenOnboarding;
+  final bool isLoggedIn;
 
   const SplashScreen({
     super.key,
     this.isDark = true,
     this.hasSeenOnboarding = false,
+    this.isLoggedIn = false,
   });
 
   @override
@@ -59,15 +61,20 @@ class _SplashScreenState extends State<SplashScreen>
     // Masuk mulus ke halaman tujuan (Onboarding untuk pertama kali, atau langsung Dashboard jika sudah pernah)
     Timer(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
-      final targetScreen = widget.hasSeenOnboarding
-          ? MainTabScreen(initialIsDark: widget.isDark)
-          : OnboardingScreen(isDark: widget.isDark);
+      Widget targetScreen;
+      if (!widget.hasSeenOnboarding) {
+        targetScreen = OnboardingScreen(isDark: widget.isDark);
+      } else if (!widget.isLoggedIn) {
+        targetScreen = AuthScreen(isDark: widget.isDark, onThemeChanged: () {});
+      } else {
+        targetScreen = MainTabScreen(initialIsDark: widget.isDark);
+      }
 
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 400),
-          pageBuilder: (_, __, ___) => targetScreen,
-          transitionsBuilder: (_, animation, __, child) {
+          pageBuilder: (_, _, _) => targetScreen,
+          transitionsBuilder: (_, animation, _, child) {
             return FadeTransition(opacity: animation, child: child);
           },
         ),

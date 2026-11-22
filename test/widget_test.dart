@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 import 'package:finances/main.dart';
 import 'package:finances/screens/main_tab_screen.dart';
 import 'package:finances/widgets/bouncy_touch_wrapper.dart';

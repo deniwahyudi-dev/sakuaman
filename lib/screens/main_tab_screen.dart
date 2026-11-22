@@ -9,7 +9,12 @@ import '../models/transaction.dart';
 import '../services/promotion_manager.dart';
 import '../services/preferences_service.dart';
 import '../services/native_notification_service.dart';
+import '../services/database_service.dart';
+import '../services/transaction_storage.dart';
+import '../services/auth_service.dart';
 import '../theme/saku_theme.dart';
+import '../models/user.dart';
+import 'auth_screen.dart';
 import '../widgets/ambient_mesh_background.dart';
 import '../widgets/add_transaction_sheet.dart';
 import '../widgets/receipt_scanner_sheet.dart';
@@ -53,7 +58,6 @@ class MainTabScreen extends StatefulWidget {
 class _MainTabScreenState extends State<MainTabScreen>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
-  int _previousIndex = 0;
   late bool _isDark;
   bool _isMorphOpen = false;
   bool _isTopPopoverOpen = false;
@@ -88,54 +92,9 @@ class _MainTabScreenState extends State<MainTabScreen>
     }
   }
 
-  // Initial Sample Transactions
-  final List<TransactionModel> _transactions = [
-    TransactionModel(
-      id: '1',
-      title: 'Gaji Bulanan',
-      amount: 8500000,
-      type: TransactionType.income,
-      category: 'Gaji',
-      date: DateTime.now().subtract(const Duration(hours: 4)),
-      source: 'BCA',
-    ),
-    TransactionModel(
-      id: '2',
-      title: 'Kopi Kenangan',
-      amount: 32000,
-      type: TransactionType.expense,
-      category: 'Makanan',
-      date: DateTime.now().subtract(const Duration(hours: 7)),
-      source: 'GoPay',
-    ),
-    TransactionModel(
-      id: '3',
-      title: 'SPBU Pertamina',
-      amount: 150000,
-      type: TransactionType.expense,
-      category: 'Transportasi',
-      date: DateTime.now().subtract(const Duration(days: 1, hours: 2)),
-      source: 'Mandiri',
-    ),
-    TransactionModel(
-      id: '4',
-      title: 'Alfamart Belanja',
-      amount: 84000,
-      type: TransactionType.expense,
-      category: 'Belanja',
-      date: DateTime.now().subtract(const Duration(days: 2)),
-      source: 'ShopeePay',
-    ),
-    TransactionModel(
-      id: '5',
-      title: 'Investasi Reksadana',
-      amount: 1000000,
-      type: TransactionType.expense,
-      category: 'Investasi',
-      date: DateTime.now().subtract(const Duration(days: 3)),
-      source: 'BCA',
-    ),
-  ];
+  // Transactions from Database
+  List<TransactionModel> _transactions = [];
+  UserModel? _currentUser;
 
   @override
   void initState() {
@@ -153,7 +112,51 @@ class _MainTabScreenState extends State<MainTabScreen>
       reverseCurve: Curves.easeOutCubic,
     );
     ProMotionManager.instance.initialize();
+    _loadTransactions();
     _initGlobalNotificationListener();
+  }
+
+  Future<void> _loadTransactions() async {
+    final user = await AuthService.instance.getCurrentUser();
+    if (user == null) {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          CupertinoPageRoute(builder: (_) => AuthScreen(isDark: _isDark, onThemeChanged: () {})),
+        );
+      }
+      return;
+    }
+    setState(() => _currentUser = user);
+    await _migrateIfNeeded(user.id);
+    final txs = await DatabaseService.instance.getAllTransactions(user.id);
+    if (mounted) {
+      setState(() {
+        _transactions = txs;
+      });
+    }
+  }
+
+  Future<void> _migrateIfNeeded(String userId) async {
+    final migrated = await PreferencesService.isMigrated();
+    if (!migrated) {
+      final oldTxs = await TransactionStorage.loadTransactions();
+      if (oldTxs.isNotEmpty) {
+        // Assign user_id to transactions before inserting
+        final txsToMigrate = oldTxs.map((tx) => TransactionModel(
+          id: tx.id,
+          title: tx.title,
+          amount: tx.amount,
+          type: tx.type,
+          category: tx.category,
+          date: tx.date,
+          source: tx.source,
+          note: tx.note,
+          userId: userId,
+        )).toList();
+        await DatabaseService.instance.insertAll(txsToMigrate);
+      }
+      await PreferencesService.setMigrated(true);
+    }
   }
 
   void _initGlobalNotificationListener() async {
@@ -180,16 +183,25 @@ class _MainTabScreenState extends State<MainTabScreen>
     super.dispose();
   }
 
-  void _addTransaction(TransactionModel tx) {
-    setState(() {
-      _transactions.insert(0, tx);
-    });
+  void _addTransaction(TransactionModel tx) async {
+    final newTx = TransactionModel(
+      id: tx.id,
+      title: tx.title,
+      amount: tx.amount,
+      type: tx.type,
+      category: tx.category,
+      date: tx.date,
+      source: tx.source,
+      note: tx.note,
+      userId: _currentUser!.id,
+    );
+    await DatabaseService.instance.insertTransaction(newTx);
+    await _loadTransactions();
   }
 
-  void _deleteTransaction(String id) {
-    setState(() {
-      _transactions.removeWhere((tx) => tx.id == id);
-    });
+  void _deleteTransaction(String id) async {
+    await DatabaseService.instance.deleteTransaction(id);
+    await _loadTransactions();
   }
 
   void _toggleTheme() {
@@ -258,7 +270,6 @@ class _MainTabScreenState extends State<MainTabScreen>
         dismissSignal: _dismissTopPopoverSignal,
         onNavigateToHistory: () {
           setState(() {
-            _previousIndex = _currentIndex;
             _currentIndex = 1;
           });
         },
@@ -407,7 +418,6 @@ class _MainTabScreenState extends State<MainTabScreen>
                   }
                   if (_currentIndex != index) {
                     setState(() {
-                      _previousIndex = _currentIndex;
                       _currentIndex = index;
                       _isMorphOpen = false;
                       if (_isTopPopoverOpen) {

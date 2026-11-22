@@ -33,96 +33,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet>
   bool _isScanning = false;
   String _selectedPresetName = "";
 
-  final List<Map<String, dynamic>> _presets = [
-    {
-      "name": "Alfamart",
-      "category": "Belanja",
-      "icon": CupertinoIcons.cart_fill,
-      "color": const Color(0xFF007AFF),
-      "text": """ALFAMART CILANDAK KKO
-JL. CILANDAK NO. 12 JAKSEL
-================================
-1 CHITATO SAPI PANGGANG  Rp 12.500
-1 ULTRA MILK COKLAT 250M Rp  7.500
-1 INDOMIE GORENG SPESIAL Rp  3.500
-1 TISSUE PASEO 250S      Rp 15.000
-================================
-TOTAL BELANJA : Rp 38.500
-TUNAI         : Rp 50.000
-KEMBALIAN     : Rp 11.500
-TGL: 14/11/2026 19:42 KASIR: BUDI
-TERIMA KASIH TELAH BERBELANJA"""
-    },
-    {
-      "name": "Indomaret",
-      "category": "Belanja",
-      "icon": CupertinoIcons.bag_fill,
-      "color": const Color(0xFF5856D6),
-      "text": """INDOMARET POINT STASIUN
-PT INDOMARCO PRISMATAMA
-================================
-1 POINT COFFEE ICED LATTE Rp 25.000
-1 ROTI SAY BREAD COKLAT   Rp  9.000
-1 AIR MINERAL LE MINERALE Rp  4.000
-================================
-TOTAL HARGA   : Rp 38.000
-PEMBAYARAN QRIS: Rp 38.000
-TGL: 14/11/2026 08:15 KASIR: SITI
-STRUK INI BUKTI PEMBAYARAN SAH"""
-    },
-    {
-      "name": "Shopee",
-      "category": "Online",
-      "icon": CupertinoIcons.shopping_cart,
-      "color": const Color(0xFFFF9500),
-      "text": """SHOPEE INDONESIA - RINCIAN PESANAN
-NO. PESANAN: 261114SPX9821A
-================================
-1 KABEL DATA TYPE-C FAST CHG Rp 45.000
-1 PELINDUNG LAYAR TEMPERED  Rp 25.000
-SUBTOTAL PRODUK             Rp 70.000
-TOTAL ONGKOS KIRIM          Rp 12.000
-DISKON VOUCHER GRATIS ONGKIR-Rp 12.000
-================================
-TOTAL PEMBAYARAN: Rp 70.000
-METODE: SHOPEEPAY
-STATUS: PESANAN SELESAI
-TANGGAL: 14/11/2026"""
-    },
-    {
-      "name": "Pertamina",
-      "category": "BBM",
-      "icon": CupertinoIcons.flame_fill,
-      "color": const Color(0xFF34C759),
-      "text": """SPBU 31.12702 PERTAMINA
-JL. GATOT SUBROTO KAV 50
-================================
-PRODUK     : PERTAMAX 92
-HARGA/LTR  : Rp 12.950
-VOLUME     : 11.58 LITER
-================================
-TOTAL      : Rp 150.000
-METODE     : MYPERTAMINA / QRIS
-TGL/WAKTU  : 14/11/2026 14:20:10
-TERIMA KASIH DAN SELAMAT JALAN"""
-    },
-    {
-      "name": "Kopi Kenangan",
-      "category": "F&B",
-      "icon": Icons.local_cafe_rounded,
-      "color": const Color(0xFFAF52DE),
-      "text": """KOPI KENANGAN - MALL SENAYAN
-================================
-1 KOPI KENANGAN MANTAN (L) Rp 24.000
-1 TOAST COKLAT KLASIK      Rp 18.000
-SUBTOTAL                   Rp 42.000
-PB1 (10%)                  Rp  4.200
-================================
-GRAND TOTAL  : Rp 46.200
-QRIS BCA     : Rp 46.200
-TANGGAL      : 14/11/2026 16:30"""
-    },
-  ];
+  final List<Map<String, dynamic>> _presets = [];
 
   @override
   void initState() {
@@ -131,9 +42,6 @@ TANGGAL      : 14/11/2026 16:30"""
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
-
-    // Otomatis siapkan preset awal untuk preview instan
-    _selectPreset(_presets.first);
   }
 
   @override
@@ -583,7 +491,7 @@ TANGGAL      : 14/11/2026 16:30"""
                         scrollDirection: Axis.horizontal,
                         physics: const BouncingScrollPhysics(),
                         itemCount: _presets.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 6),
+                        separatorBuilder: (_, _) => const SizedBox(width: 6),
                         itemBuilder: (context, index) {
                           final p = _presets[index];
                           final isSelected = p["name"] == _selectedPresetName;

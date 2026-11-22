@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -169,8 +168,9 @@ class _LiquidBalanceCardState extends State<LiquidBalanceCard>
       child: Transform(
         alignment: Alignment.center,
         transform: Matrix4.identity()
-          ..translate(_dragOffset.dx * 0.8, _dragOffset.dy * 0.8)
-          ..scale(scaleX, scaleY),
+          ..setTranslationRaw(_dragOffset.dx * 0.8, _dragOffset.dy * 0.8, 0.0)
+          ..setEntry(0, 0, scaleX)
+          ..setEntry(1, 1, scaleY),
         child: Container(
           height: 232,
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

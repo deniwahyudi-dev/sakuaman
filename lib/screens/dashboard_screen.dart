@@ -7,11 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 import '../models/transaction.dart';
-import '../services/notification_parser.dart';
 import '../widgets/liquid_card.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/add_transaction_sheet.dart';
-import '../widgets/saku_logo.dart';
 import '../widgets/bouncy_touch_wrapper.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -85,7 +82,7 @@ class _DashboardViewState extends State<_DashboardView> {
   bool _isInteractingBalanceCard = false;
   bool _isNotifMenuOpen = false;
   bool _wideNotif = false;
-  bool _isLoading = false;
+  final bool _isLoading = false;
   Timer? _loadingTimer;
 
   @override
@@ -151,14 +148,6 @@ class _DashboardViewState extends State<_DashboardView> {
     }
   }
 
-  String get _todayFormatted {
-    try {
-      return DateFormat('EEE, d MMM', 'id_ID').format(DateTime.now());
-    } catch (_) {
-      return 'Hari Ini';
-    }
-  }
-
   String _formatRelTime(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
@@ -200,18 +189,6 @@ class _DashboardViewState extends State<_DashboardView> {
       }
     }
     return topCat;
-  }
-
-  void _openAddSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => AddTransactionSheet(
-        onAdd: widget.onAddTransaction,
-        isDark: widget.isDark,
-      ),
-    );
   }
 
   @override

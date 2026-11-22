@@ -115,7 +115,7 @@ class ReceiptParserEngine {
       final numbers = RegExp(r'(?:rp\.?|idr)?\s*([0-9]{1,3}(?:\.[0-9]{3})+(?:,[0-9]{2})?)', caseSensitive: false)
           .allMatches(rawText)
           .map((m) => _cleanNumber(m.group(1) ?? ""))
-          .where((num) => num >= 1000 && num <= 100000000)
+          .where((n) => n >= 1000 && n <= 100000000)
           .toList();
       if (numbers.isNotEmpty) {
         detectedAmount = numbers.reduce(math.max);
